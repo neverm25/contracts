@@ -19,7 +19,7 @@ interface IVoter {
 interface IveNFT {
     function totalSupply() external view returns (uint256);
 }
-interface IEquilibreTvlOracle {
+interface ITvlOracle {
     function p_t_coin_usd(address) external view returns (uint256);
 }
 
@@ -27,13 +27,13 @@ contract Equilibre_VE_Api is Ownable {
     IERC20 public VARA ;//= IERC20(0x3Fd3A0c85B70754eFc07aC9Ac0cbBDCe664865A6);
     IVoter public VOTER ;//= IVoter(0x4bebEB8188aEF8287f9a7d1E4f01d76cBE060d5b);
     IveNFT public veNFT ;//= IveNFT(0x8313f3551C4D3984FfbaDFb42f780D0c8763Ce94);
-    IEquilibreTvlOracle public ORACLE; //= IEquilibreTvlOracle(0x0786c3a78f5133F08C1c70953B8B10376bC6dCad);
+    ITvlOracle public ORACLE; //= ITvlOracle(0x0786c3a78f5133F08C1c70953B8B10376bC6dCad);
 
     address[] public excluded = [address(0), 0x000000000000000000000000000000000000dEaD];
     address public pool2;// = 0x3d6c56f6855b7Cc746fb80848755B0a9c3770122;
 
     constructor(address _oracle, address _pool2, address _vara, address _voter, address _ve ) {
-        ORACLE = IEquilibreTvlOracle(_oracle);
+        ORACLE = ITvlOracle(_oracle);
         VARA = IERC20(_vara);
         VOTER = IVoter(_voter);
         veNFT = IveNFT(_ve);
@@ -44,7 +44,7 @@ contract Equilibre_VE_Api is Ownable {
         pool2 = _pool2;
     }
     function setOracle(address _oracle) public onlyOwner {
-        ORACLE = IEquilibreTvlOracle(_oracle);
+        ORACLE = ITvlOracle(_oracle);
     }
 
     function addExcluded(address _e) public onlyOwner {

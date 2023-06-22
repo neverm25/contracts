@@ -11,7 +11,7 @@ async function main() {
     const CONFIG = mainnet ? mainnet_config : testnet_config;
     // Load
     const [ Factory ] = await Promise.all([
-        hre.ethers.getContractFactory("EQUILIBRE_MULTICALL")
+        hre.ethers.getContractFactory("Multicall")
     ]);
 
     const main = await Factory.deploy();

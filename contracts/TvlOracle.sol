@@ -29,7 +29,7 @@ interface LPT
     function transfer(address, uint) external;
 }
 
-contract EquilibreTvlOracle is Ownable
+contract TvlOracle is Ownable
 {
     /*
      -	Personal Functions must begin with an "_".
