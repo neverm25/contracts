@@ -9,13 +9,15 @@ contract PairFactory is IPairFactory {
     bool public isPaused;
     address public pauser;
     address public pendingPauser;
-
+    uint public PRECISION = 10000;
     uint256 public stableFee;
     uint256 public volatileFee;
     uint256 public constant MAX_FEE = 50; // 0.5%
     address public feeManager;
     address public pendingFeeManager;
     address public gammaFeeRecipient;
+    uint256 public gammaShare = 0; // usually 7%
+    uint256 public immutable gammaMAX = 2500; //25%
 
     uint256 public referralFee; // 12%
     uint256 public stakingNFTFee;
@@ -42,6 +44,7 @@ contract PairFactory is IPairFactory {
     event PauserSet(address _pauser);
     event Paused(bool _state);
     event FeeManagerSet(address _feeManager);
+    event GammaShareSet(uint256 _gammaShare);
 
     constructor( address _gammaFeeRecipient ) {
         require(_gammaFeeRecipient != address(0), "zero address");
@@ -164,5 +167,10 @@ contract PairFactory is IPairFactory {
         emit StakingNFTFeeSet(_stakingNFTFee);
         stakingNFTFee = _stakingNFTFee;
     }
-
+    function setGammaShare(uint256 _gammaShare) external  {
+        require(msg.sender == feeManager, 'not fee manager');
+        if(_gammaShare > gammaMAX) _gammaShare = gammaMAX;
+        emit GammaShareSet(_gammaShare);
+        gammaShare = _gammaShare;
+    }
 }

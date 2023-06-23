@@ -21,9 +21,6 @@ contract CLFeesVault is Ownable {
         uint256 amount1;
     }
     IVoter public voter;
-    uint256 public PRECISION = 10000;
-    uint256 public gammaShare = 0; // usually 7%
-    uint256 public immutable gammaMAX = 2500; //25%
 
     address public pool;
     IPairFactory public pairFactory;
@@ -94,9 +91,10 @@ contract CLFeesVault is Ownable {
     function getFees(uint amount) public view returns(uint gamma, uint referral, uint nft, uint gauge) {
         uint256 referralFee = pairFactory.activeReferral() ? pairFactory.referralFee() : 0;
         uint256 theNftFee = pairFactory.stakingNFTFee();
-        referral = amount * referralFee / PRECISION;
-        nft = (amount - referral) * theNftFee / PRECISION;
-        gamma = amount * gammaShare / PRECISION;
+        uint precision = pairFactory.PRECISION();
+        referral = amount * referralFee / precision;
+        nft = (amount - referral) * theNftFee / precision;
+        gamma = amount * pairFactory.gammaShare() / precision;
         gauge = amount - gamma - nft - referral;
     }
 

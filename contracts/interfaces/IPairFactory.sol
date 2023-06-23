@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 interface IPairFactory {
+    function PRECISION() external view returns (uint);
     function allPairsLength() external view returns (uint);
     function isPair(address pair) external view returns (bool);
     function pairCodeHash() external pure returns (bytes32);
@@ -14,4 +15,5 @@ interface IPairFactory {
     function dibs() external view returns(address);
     function gammaFeeRecipient() external view returns(address);
     function activeReferral() external view returns(bool);
+    function gammaShare() external view returns(uint);
 }
