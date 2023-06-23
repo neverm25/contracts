@@ -428,8 +428,12 @@ contract Voter is IVoter {
     }
 
     /// @notice switcher to use algebra factory pools:
-    function setuSeAlgebra(bool _useAlgebraFactory) external onlyOwner {
+    function setUseAlgebra(bool _useAlgebraFactory) external onlyOwner {
         useAlgebraFactory = _useAlgebraFactory;
+    }
+
+    function _epochTimestamp() internal view returns(uint256) {
+        return IMinter(minter).active_period();
     }
 
 }
