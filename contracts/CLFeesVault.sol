@@ -21,7 +21,7 @@ interface IPairFactory{
 }
 
 
-contract CLFeesVault {
+contract CLFeesVault is Ownable {
 
     using SafeERC20 for IERC20;
 
@@ -45,8 +45,7 @@ contract CLFeesVault {
     address public gammaRecipient;
     address public dibs;
     address public theNftStakingConverter;
-    address public pairFactoryClassic = address(0xAFD89d21BdB66d00817d4153E055830B1c2B3970);
-    IPermissionsRegistry public permissionsRegsitry;
+    address public pairFactory = address(0xAFD89d21BdB66d00817d4153E055830B1c2B3970);
 
     mapping(address => bool) public isHypervisor;           //address   =>  boolean         check if caller is gamma strategy. Hypervisor calls updatedFees
 
@@ -57,10 +56,6 @@ contract CLFeesVault {
         require(voter.isGauge(msg.sender),'!gauge contract');
         _;
     }
-    modifier onlyAdmin {
-        require(permissionsRegsitry.hasRole("CL_FEES_VAULT_ADMIN",msg.sender), 'ERR: GAUGE_ADMIN');
-        _;
-    }
 
     /* -----------------------------------------------------------------------------
                                     EVENTS
@@ -69,17 +64,13 @@ contract CLFeesVault {
     event Fees0(uint gamma, uint referral, uint nft, uint gauge, address indexed token);
     event Fees1(uint gamma, uint referral, uint nft, uint gauge, address indexed token);
 
-
-    /* -----------------------------------------------------------------------------
-                                    CONSTRUCTOR AND INIT
-    ----------------------------------------------------------------------------- */
-    constructor(address _pool, address _permissionRegistry, address _voter, address _gammaFeeRecipient) {
-        permissionsRegsitry = IPermissionsRegistry(_permissionRegistry);
+    constructor(address _pool, address _pairFactory, address _voter, address _gammaFeeRecipient) {
+        pairFactory = _pairFactory;
         pool = _pool;
         voter = IVoter(_voter);
-        theNftStakingConverter = IPairFactory(pairFactoryClassic).stakingFeeHandler();
+        theNftStakingConverter = IPairFactory(pairFactory).stakingFeeHandler();
         gammaRecipient = _gammaFeeRecipient;
-        dibs = IPairFactory(pairFactoryClassic).dibs();
+        dibs = IPairFactory(pairFactory).dibs();
     }
 
 
@@ -138,12 +129,12 @@ contract CLFeesVault {
     function _getFees(uint amount) internal view returns(uint gamma, uint referral, uint nft, uint gauge) {
         uint256 referralFee;
         if(activereferral) {
-            referralFee = IPairFactory(pairFactoryClassic).MAX_REFERRAL_FEE();
+            referralFee = IPairFactory(pairFactory).MAX_REFERRAL_FEE();
         } else {
             referralFee = 0;
         }
 
-        uint256 theNftFee = IPairFactory(pairFactoryClassic).stakingNFTFee();
+        uint256 theNftFee = IPairFactory(pairFactory).stakingNFTFee();
         referral = amount * referralFee / PRECISION;
         nft = (amount - referral) * theNftFee / PRECISION;
         gamma = amount * gammaShare / PRECISION;
@@ -159,55 +150,55 @@ contract CLFeesVault {
     --------------------------------------------------------------------------------
     --------------------------------------------------------------------------------
     ----------------------------------------------------------------------------- */
-    function setActiveReferral(bool _what) external onlyAdmin {
+    function setActiveReferral(bool _what) external onlyOwner {
         require(activereferral != _what);
         activereferral = _what;
     }
 
-    function setGammaShare(uint256 share) external onlyAdmin {
+    function setGammaShare(uint256 share) external onlyOwner {
         require(share <= gammaMAX);
         gammaShare = share;
     }
 
-    function setGammaRecipient(address _gR) external onlyAdmin {
+    function setGammaRecipient(address _gR) external onlyOwner {
         require(_gR != address(0));
         gammaRecipient = _gR;
     }
 
 
-    function setDibs(address _dibs) external onlyAdmin {
+    function setDibs(address _dibs) external onlyOwner {
         require(_dibs != address(0));
         dibs = _dibs;
     }
 
-    function setNftStaking(address _theNftStaking) external onlyAdmin {
+    function setNftStaking(address _theNftStaking) external onlyOwner {
         require(_theNftStaking != address(0));
         theNftStakingConverter = _theNftStaking;
     }
 
-    function setPairFactory(address _pf) external onlyAdmin {
+    function setPairFactory(address _pf) external onlyOwner {
         require(_pf != address(0));
-        pairFactoryClassic = _pf;
+        pairFactory = _pf;
     }
 
-    function setVoter(address vt) external onlyAdmin {
+    function setVoter(address vt) external onlyOwner {
         require(vt != address(0));
         voter = IVoter(vt);
     }
 
 
-    function setPermissionRegistry(address _pr) external onlyAdmin {
+    function setPermissionRegistry(address _pr) external onlyOwner {
         require(_pr != address(0));
         permissionsRegsitry = IPermissionsRegistry(_pr);
     }
 
-    function setPool(address _pool) external onlyAdmin {
+    function setPool(address _pool) external onlyOwner {
         require(_pool != address(0));
         pool = _pool;
     }
 
     /// @notice Recover ERC20 from the contract.
-    function emergencyRecoverERC20(address tokenAddress, uint256 tokenAmount) external onlyAdmin {
+    function emergencyRecoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
         require(tokenAmount <= IERC20(tokenAddress).balanceOf(address(this)));
         IERC20(tokenAddress).safeTransfer(permissionsRegsitry.varaTeamMultisig(), tokenAmount);
     }

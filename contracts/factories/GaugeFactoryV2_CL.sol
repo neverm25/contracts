@@ -7,7 +7,7 @@ import '../interfaces/IGaugeFactoryV2.sol';
 import '../GaugeV2_CL.sol';
 import "../CLFeesVault.sol";
 
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 interface IGauge{
     function setDistribution(address _distro) external;
@@ -44,13 +44,9 @@ contract GaugeFactoryV2_CL is IGaugeFactory, OwnableUpgradeable {
     }
 
     function createGaugeV2(address _rewardToken,address _ve,address _token,address _distribution, address _internal_bribe, address _external_bribe, bool /*_isPair*/) external returns (address) {
-    
         last_feeVault = address( new CLFeesVault(_token, permissionsRegistry, _distribution, gammaFeeRecipient) );
-
         last_gauge = address(new GaugeV2_CL(_rewardToken,_ve,_token,_distribution,_internal_bribe,_external_bribe, last_feeVault) );
-
         __gauges.push(last_gauge);
-
         return last_gauge;
     }
 

@@ -218,7 +218,14 @@ contract Voter is IVoter {
         address tokenA;
         address tokenB;
 
-        isPair = IPairFactory(factory).isPair(_pool);
+        if( useAlgebraFactory ) {
+            address _pool_factory = IAlgebraFactory(_factory).poolByPair(tokenA, tokenB);
+            address _pool_hyper = IHypervisor(_pool).pool();
+            isPair = _pool_hyper == _pool_factory;
+            require(isPair, 'wrong tokens');
+        } else {
+            isPair = IPairFactory(factory).isPair(_pool);
+        }
 
         if (isPair) {
             (tokenA, tokenB) = IPair(_pool).tokens();
@@ -239,7 +246,12 @@ contract Voter is IVoter {
 
         address _internal_bribe = IBribeFactory(bribefactory).createInternalBribe(internalRewards);
         address _external_bribe = IBribeFactory(bribefactory).createExternalBribe(allowedRewards);
-        _gauge = IGaugeFactory(gaugefactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+
+        if( useAlgebraFactory ) {
+            _gauge = IGaugeFactory(gaugefactory).createGaugeOnAlgebra(base, address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+        }else{
+            _gauge = IGaugeFactory(gaugefactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+        }
 
         IERC20(base).approve(_gauge, type(uint256).max);
         internal_bribes[_gauge] = _internal_bribe;
