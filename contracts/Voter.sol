@@ -22,8 +22,8 @@ contract Voter is IVoter {
     address public immutable _ve; // the ve token that governs these contracts
     address public immutable factory; // the PairFactory
     address internal immutable base;
-    address public immutable gaugefactory;
-    address public immutable bribefactory;
+    address public immutable gaugeFactory;
+    address public immutable bribeFactory;
     uint256 internal constant DURATION = 7 days; // rewards are released over 7 days
     address public minter;
     address public governor; // should be set to an IGovernor
@@ -65,8 +65,8 @@ contract Voter is IVoter {
         _ve = __ve;
         factory = _factory;
         base = IVotingEscrow(__ve).token();
-        gaugefactory = _gauges;
-        bribefactory = _bribes;
+        gaugeFactory = _gauges;
+        bribeFactory = _bribes;
         minter = msg.sender;
         governor = msg.sender;
         emergencyCouncil = msg.sender;
@@ -244,13 +244,13 @@ contract Voter is IVoter {
             require(isWhitelisted[tokenA] && isWhitelisted[tokenB], "!whitelisted");
         }
 
-        address _internal_bribe = IBribeFactory(bribefactory).createInternalBribe(internalRewards);
-        address _external_bribe = IBribeFactory(bribefactory).createExternalBribe(allowedRewards);
+        address _internal_bribe = IBribeFactory(bribeFactory).createInternalBribe(internalRewards);
+        address _external_bribe = IBribeFactory(bribeFactory).createExternalBribe(allowedRewards);
 
         if( useAlgebraFactory ) {
-            _gauge = IGaugeFactory(gaugefactory).createGaugeOnAlgebra(base, address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+            _gauge = IGaugeFactory(gaugeFactory).createGaugeOnAlgebra(base, address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
         }else{
-            _gauge = IGaugeFactory(gaugefactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+            _gauge = IGaugeFactory(gaugeFactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
         }
 
         IERC20(base).approve(_gauge, type(uint256).max);
