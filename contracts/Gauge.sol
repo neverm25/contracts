@@ -9,15 +9,21 @@ import 'contracts/interfaces/IPair.sol';
 import 'contracts/interfaces/IVoter.sol';
 import 'contracts/interfaces/IVotingEscrow.sol';
 
+// algebra integration
+import 'contracts/interfaces/IRewarder.sol';
+import 'contracts/interfaces/IFeeVault.sol';
+import 'contracts/interfaces/IPairInfo.sol';
+
 // Gauges are used to incentivize pools, they emit reward tokens over 7 days for staked LP tokens
 contract Gauge is IGauge {
 
     address public immutable stake; // the LP token that needs to be staked for rewards
     address public immutable _ve; // the ve token used for gauges
+    IVotingEscrow public immutable ve;
     address public immutable internal_bribe;
     address public immutable external_bribe;
     address public immutable voter;
-
+    address public gaugeRewarder;
     uint public derivedSupply;
     mapping(address => uint) public derivedBalances;
 
@@ -63,17 +69,17 @@ contract Gauge is IGauge {
     }
 
     /// @notice A record of balance checkpoints for each account, by index
-    mapping (address => mapping (uint => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint => Checkpoint)) public checkpoints;
     /// @notice The number of checkpoints for each account
-    mapping (address => uint) public numCheckpoints;
+    mapping(address => uint) public numCheckpoints;
     /// @notice A record of balance checkpoints for each token, by index
-    mapping (uint => SupplyCheckpoint) public supplyCheckpoints;
+    mapping(uint => SupplyCheckpoint) public supplyCheckpoints;
     /// @notice The number of checkpoints
     uint public supplyNumCheckpoints;
     /// @notice A record of balance checkpoints for each token, by index
-    mapping (address => mapping (uint => RewardPerTokenCheckpoint)) public rewardPerTokenCheckpoints;
+    mapping(address => mapping(uint => RewardPerTokenCheckpoint)) public rewardPerTokenCheckpoints;
     /// @notice The number of checkpoints for each token
-    mapping (address => uint) public rewardPerTokenNumCheckpoints;
+    mapping(address => uint) public rewardPerTokenNumCheckpoints;
 
     uint public fees0;
     uint public fees1;
@@ -84,13 +90,18 @@ contract Gauge is IGauge {
     event ClaimFees(address indexed from, uint claimed0, uint claimed1);
     event ClaimRewards(address indexed from, address indexed reward, uint amount);
 
-    constructor(address _stake, address _internal_bribe, address _external_bribe, address  __ve, address _voter, bool _forPair, address[] memory _allowedRewardTokens) {
+    // algebra integration:
+    address public feeVault;
+
+    constructor(address _stake, address _internal_bribe, address _external_bribe, address __ve, address _voter, bool _forPair, address[] memory _allowedRewardTokens, address _feeVault) {
         stake = _stake;
         internal_bribe = _internal_bribe;
         external_bribe = _external_bribe;
         _ve = __ve;
+        ve = IVotingEscrow(__ve);
         voter = _voter;
         isForPair = _forPair;
+        feeVault = _feeVault;
 
         for (uint i; i < _allowedRewardTokens.length; i++) {
             if (_allowedRewardTokens[i] != address(0)) {
@@ -117,11 +128,27 @@ contract Gauge is IGauge {
         if (!isForPair) {
             return (0, 0);
         }
-        (claimed0, claimed1) = IPair(stake).claimFees();
+
+        if( address(feeVault) != address(0) ) {
+            // claim from Algebra
+            (claimed0, claimed1) = IFeeVault(feeVault).claimFees();
+        } else {
+            // claim from ve(3,3)
+            (claimed0, claimed1) = IPair(stake).claimFees();
+        }
+
         if (claimed0 > 0 || claimed1 > 0) {
+            address _token0;
+            address _token1;
             uint _fees0 = fees0 + claimed0;
             uint _fees1 = fees1 + claimed1;
-            (address _token0, address _token1) = IPair(stake).tokens();
+            if( address(feeVault) != address(0) ) {
+                _token0 = IPairInfo(_token).token0();
+                _token1 = IPairInfo(_token).token1();
+            } else {
+                (_token0, _token1) = IPair(stake).tokens();
+            }
+
             if (_fees0 > IBribe(internal_bribe).left(_token0) && _fees0 / DURATION > 0) {
                 fees0 = 0;
                 _safeApprove(_token0, internal_bribe, _fees0);
@@ -215,7 +242,7 @@ contract Gauge is IGauge {
     function getPriorRewardPerToken(address token, uint timestamp) public view returns (uint, uint) {
         uint nCheckpoints = rewardPerTokenNumCheckpoints[token];
         if (nCheckpoints == 0) {
-            return (0,0);
+            return (0, 0);
         }
 
         // First check most recent balance
@@ -225,7 +252,7 @@ contract Gauge is IGauge {
 
         // Next check implicit zero balance
         if (rewardPerTokenCheckpoints[token][0].timestamp > timestamp) {
-            return (0,0);
+            return (0, 0);
         }
 
         uint lower = 0;
@@ -313,6 +340,10 @@ contract Gauge is IGauge {
 
         _writeCheckpoint(account, derivedBalances[account]);
         _writeSupplyCheckpoint();
+
+        if (address(gaugeRewarder) != address(0))
+            IRewarder(gaugeRewarder).onReward( msg.sender, msg.sender, balanceOf[msg.sender]);
+
     }
 
 
@@ -328,7 +359,7 @@ contract Gauge is IGauge {
     }
 
     function batchRewardPerToken(address token, uint maxRuns) external {
-        (rewardPerTokenStored[token], lastUpdateTime[token])  = _batchRewardPerToken(token, maxRuns);
+        (rewardPerTokenStored[token], lastUpdateTime[token]) = _batchRewardPerToken(token, maxRuns);
     }
 
     function _batchRewardPerToken(address token, uint maxRuns) internal returns (uint, uint) {
@@ -344,12 +375,12 @@ contract Gauge is IGauge {
         }
 
         uint _startIndex = getPriorSupplyIndex(_startTimestamp);
-        uint _endIndex = Math.min(supplyNumCheckpoints-1, maxRuns);
+        uint _endIndex = Math.min(supplyNumCheckpoints - 1, maxRuns);
 
         for (uint i = _startIndex; i < _endIndex; i++) {
             SupplyCheckpoint memory sp0 = supplyCheckpoints[i];
             if (sp0.supply > 0) {
-                SupplyCheckpoint memory sp1 = supplyCheckpoints[i+1];
+                SupplyCheckpoint memory sp1 = supplyCheckpoints[i + 1];
                 (uint _reward, uint _endTime) = _calcRewardPerToken(token, sp1.timestamp, sp0.timestamp, sp0.supply, _startTimestamp);
                 reward += _reward;
                 _writeRewardPerTokenCheckpoint(token, reward, _endTime);
@@ -368,15 +399,15 @@ contract Gauge is IGauge {
     /// @dev Update stored rewardPerToken values without the last one snapshot
     ///      If the contract will get "out of gas" error on users actions this will be helpful
     function batchUpdateRewardPerToken(address token, uint maxRuns) external {
-      (rewardPerTokenStored[token], lastUpdateTime[token]) = _updateRewardPerToken(token, maxRuns, false);
+        (rewardPerTokenStored[token], lastUpdateTime[token]) = _updateRewardPerToken(token, maxRuns, false);
     }
 
     function _updateRewardForAllTokens() internal {
-      uint length = rewards.length;
-      for (uint i; i < length; i++) {
-        address token = rewards[i];
-        (rewardPerTokenStored[token], lastUpdateTime[token]) = _updateRewardPerToken(token, type(uint).max, true);
-      }
+        uint length = rewards.length;
+        for (uint i; i < length; i++) {
+            address token = rewards[i];
+            (rewardPerTokenStored[token], lastUpdateTime[token]) = _updateRewardPerToken(token, type(uint).max, true);
+        }
     }
 
     function _updateRewardPerToken(address token, uint maxRuns, bool actualLast) internal returns (uint, uint) {
@@ -398,7 +429,7 @@ contract Gauge is IGauge {
             for (uint i = _startIndex; i <= _endIndex - 1; i++) {
                 SupplyCheckpoint memory sp0 = supplyCheckpoints[i];
                 if (sp0.supply > 0) {
-                    SupplyCheckpoint memory sp1 = supplyCheckpoints[i+1];
+                    SupplyCheckpoint memory sp1 = supplyCheckpoints[i + 1];
                     (uint _reward, uint _endTime) = _calcRewardPerToken(token, sp1.timestamp, sp0.timestamp, sp0.supply, _startTimestamp);
                     reward += _reward;
                     _writeRewardPerTokenCheckpoint(token, reward, _endTime);
@@ -429,14 +460,14 @@ contract Gauge is IGauge {
         }
 
         uint _startIndex = getPriorBalanceIndex(account, _startTimestamp);
-        uint _endIndex = numCheckpoints[account]-1;
+        uint _endIndex = numCheckpoints[account] - 1;
 
         uint reward = 0;
 
         if (_endIndex > 0) {
-            for (uint i = _startIndex; i <= _endIndex-1; i++) {
+            for (uint i = _startIndex; i <= _endIndex - 1; i++) {
                 Checkpoint memory cp0 = checkpoints[account][i];
-                Checkpoint memory cp1 = checkpoints[account][i+1];
+                Checkpoint memory cp1 = checkpoints[account][i + 1];
                 (uint _rewardPerTokenStored0,) = getPriorRewardPerToken(token, cp0.timestamp);
                 (uint _rewardPerTokenStored1,) = getPriorRewardPerToken(token, cp1.timestamp);
                 reward += cp0.balanceOf * (_rewardPerTokenStored1 - _rewardPerTokenStored0) / PRECISION;
@@ -454,8 +485,8 @@ contract Gauge is IGauge {
         deposit(IERC20(stake).balanceOf(msg.sender), tokenId);
     }
 
-    function deposit(uint amount, uint tokenId) public lock {
-        require(amount > 0);
+    function deposit(uint amount, uint tokenId) public lock isNotEmergency {
+        require(amount > 0, "invalid amount");
         _updateRewardForAllTokens();
 
         _safeTransferFrom(stake, msg.sender, address(this), amount);
@@ -468,7 +499,7 @@ contract Gauge is IGauge {
                 tokenIds[msg.sender] = tokenId;
                 IVoter(voter).attachTokenToGauge(tokenId, msg.sender);
             }
-            require(tokenIds[msg.sender] == tokenId);
+            require(tokenIds[msg.sender] == tokenId, "not owner");
         } else {
             tokenId = tokenIds[msg.sender];
         }
@@ -483,6 +514,10 @@ contract Gauge is IGauge {
         _writeSupplyCheckpoint();
 
         IVoter(voter).emitDeposit(tokenId, msg.sender, amount);
+
+        if (address(gaugeRewarder) != address(0))
+            IRewarder(gaugeRewarder).onReward( msg.sender, msg.sender, balanceOf[msg.sender]);
+
         emit Deposit(msg.sender, tokenId, amount);
     }
 
@@ -490,7 +525,7 @@ contract Gauge is IGauge {
         withdraw(balanceOf[msg.sender]);
     }
 
-    function withdraw(uint amount) public {
+    function withdraw(uint amount) public isNotEmergency {
         uint tokenId = 0;
         if (amount == balanceOf[msg.sender]) {
             tokenId = tokenIds[msg.sender];
@@ -498,7 +533,7 @@ contract Gauge is IGauge {
         withdrawToken(amount, tokenId);
     }
 
-    function withdrawToken(uint amount, uint tokenId) public lock {
+    function withdrawToken(uint amount, uint tokenId) public lock isNotEmergency {
         _updateRewardForAllTokens();
 
         totalSupply -= amount;
@@ -523,6 +558,10 @@ contract Gauge is IGauge {
         _writeSupplyCheckpoint();
 
         IVoter(voter).emitWithdraw(tokenId, msg.sender, amount);
+
+        if (address(gaugeRewarder) != address(0))
+            IRewarder(gaugeRewarder).onReward( msg.sender, msg.sender, balanceOf[msg.sender]);
+
         emit Withdraw(msg.sender, tokenId, amount);
     }
 
@@ -532,7 +571,7 @@ contract Gauge is IGauge {
         return _remaining * rewardRate[token];
     }
 
-    function notifyRewardAmount(address token, uint amount) external lock {
+    function notifyRewardAmount(address token, uint amount) external lock isNotEmergency {
         require(token != stake);
         require(amount > 0);
         if (!isReward[token]) {
@@ -593,4 +632,35 @@ contract Gauge is IGauge {
         token.call(abi.encodeWithSelector(IERC20.approve.selector, spender, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
+
+    function setFeeVault(address _feeVault) external {
+        require(msg.sender == ve.team(), 'only team');
+        feeVault = _feeVault;
+    }
+
+    modifier isNotEmergency() {
+        require(!ve.isEmergency(), 'emergency mode');
+        _;
+    }
+
+
+    function emergencyWithdraw() external lock {
+        //TODO: create test-case for this scenario.
+        require(ve.isEmergency(), 'only in emergency mode');
+        require(_balances[msg.sender] > 0, "no balances");
+
+        uint256 _amount = _balances[msg.sender];
+        _totalSupply = _totalSupply - (_amount);
+        _balances[msg.sender] = 0;
+
+        _safeTransfer(stake, msg.sender, _amount);
+        emit Withdraw(msg.sender, _amount);
+    }
+
+
+    function setGaugeRewarder(address _gaugeRewarder) external {
+        require(msg.sender == ve.team(), 'only team');
+        gaugeRewarder = _gaugeRewarder;
+    }
+
 }

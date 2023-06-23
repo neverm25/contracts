@@ -22,14 +22,14 @@ contract GaugeFactory is IGaugeFactory {
     }
 
     function createGauge(address _pool, address _internal_bribe, address _external_bribe, address _ve, bool isPair, address[] memory allowedRewards) external returns (address) {
-        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, false));
+        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, false, address(0)));
         _nativeGauges.push(last_gauge);
         emit GaugeCreated(last_gauge, _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards, false);
         return last_gauge;
     }
     function createGaugeOnAlgebra(address _rewardToken, address _distribution, address _pool, address _internal_bribe, address _external_bribe, address _ve, bool isPair, address[] memory allowedRewards) external returns (address) {
         last_feeVault = address( new CLFeesVault(_token, _distribution, gammaFeeRecipient) );
-        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, true));
+        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, true, last_feeVault));
         _algebraGauges.push(last_gauge);
         emit GaugeCreated(last_gauge, _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards, true);
         return last_gauge;

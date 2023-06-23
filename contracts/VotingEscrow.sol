@@ -69,6 +69,9 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
     address public team;
     address public artProxy;
 
+    // activate emergency mode on gauges
+    bool public isEmergency = false;
+
     mapping(uint => Point) public point_history; // epoch -> unsigned point
 
     /// @dev Mapping of interface id to bool about whether or not it's supported
@@ -1373,4 +1376,9 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
         );
         return _delegate(signatory, delegatee);
     }
+
+    function setIsEmergency(bool _isEmergency) external onlyOwner {
+        isEmergency = _isEmergency;
+    }
+
 }

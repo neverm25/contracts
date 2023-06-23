@@ -32,4 +32,6 @@ interface IVotingEscrow {
 
     function balanceOfNFT(uint) external view returns (uint);
     function totalSupply() external view returns (uint);
+
+    function isEmergency() external view returns (bool);
 }
