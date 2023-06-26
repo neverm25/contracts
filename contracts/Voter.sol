@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/libraries/Math.sol';
 import 'contracts/interfaces/IBribe.sol';
 import 'contracts/interfaces/IBribeFactory.sol';
 import 'contracts/interfaces/IGauge.sol';
 import 'contracts/interfaces/IGaugeFactory.sol';
-import 'contracts/interfaces/IERC20.sol';
+import "contracts/interfaces/IERC20.sol";
 import 'contracts/interfaces/IMinter.sol';
 import 'contracts/interfaces/IPair.sol';
 import 'contracts/interfaces/IPairFactory.sol';
@@ -219,7 +219,7 @@ contract Voter is IVoter {
         address tokenB;
 
         if( useAlgebraFactory ) {
-            address _pool_factory = IAlgebraFactory(_factory).poolByPair(tokenA, tokenB);
+            address _pool_factory = IAlgebraFactory(factory).poolByPair(tokenA, tokenB);
             address _pool_hyper = IHypervisor(_pool).pool();
             isPair = _pool_hyper == _pool_factory;
             require(isPair, 'wrong tokens');
@@ -248,7 +248,7 @@ contract Voter is IVoter {
         address _external_bribe = IBribeFactory(bribeFactory).createExternalBribe(allowedRewards);
 
         if( useAlgebraFactory ) {
-            _gauge = IGaugeFactory(gaugeFactory).createGaugeOnAlgebra(base, address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
+            _gauge = IGaugeFactory(gaugeFactory).createGaugeOnAlgebra(address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
         }else{
             _gauge = IGaugeFactory(gaugeFactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
         }
@@ -428,11 +428,12 @@ contract Voter is IVoter {
     }
 
     /// @notice switcher to use algebra factory pools:
-    function setUseAlgebra(bool _useAlgebraFactory) external onlyOwner {
+    function setUseAlgebraFactory(bool _useAlgebraFactory) external {
+        require( msg.sender != governor, "not governor");
         useAlgebraFactory = _useAlgebraFactory;
     }
 
-    function _epochTimestamp() internal view returns(uint256) {
+    function epochTimestamp() public view returns(uint256) {
         return IMinter(minter).active_period();
     }
 

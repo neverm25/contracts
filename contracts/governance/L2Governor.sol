@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (governance/Governor.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity =0.8.13;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";

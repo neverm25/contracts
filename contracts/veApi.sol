@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 // (C) Sam, 543#3017, Guru Network, 2022-9999
 // Contact: https://discord.gg/QpyfMarNrV
-pragma solidity ^0.8.13;
+pragma solidity =0.8.13;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 

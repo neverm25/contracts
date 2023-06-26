@@ -4,7 +4,7 @@
 //Version: 5
 //Author: Sam4x, 543#3017, Guru Network
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity =0.8.13;
 import "@openzeppelin/contracts/access/Ownable.sol";
 pragma abicoder v2;
 //All tvlGuru Compliant contracts must implement the ITVL interface
@@ -91,22 +91,22 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_e_usd(address q) public view returns (uint256)
     {
-        uint256 tvl = ITVL(q).tvl();
-        return tvl;
+        uint256 _tvl = ITVL(q).tvl();
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_e_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_e_usd(_bankOf_e_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_e_usd(_bankOf_e_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_e_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_e_usd.length; i++)
-        {tvl += tvlOf_e_usd(_bankOf_e_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_e_usd(_bankOf_e_usd[i]);}
+        return _tvl;
     }
 
 
@@ -151,10 +151,10 @@ contract TvlOracle is Ownable
     //Self.TVL.total
     function _tvl_coin_usd() public view returns (uint256)
     {
-        uint256 tvl = 0;
+        uint256 _tvl = 0;
         for (uint i; i < _bankOf_coin.length; i++)
-        {tvl += tvlOf_coin_usd(_bankOf_coin[i]);}
-        return (tvl);
+        {_tvl += tvlOf_coin_usd(_bankOf_coin[i]);}
+        return _tvl;
     }
 
 
@@ -192,12 +192,12 @@ contract TvlOracle is Ownable
     //Bank
     t_usd[] public _bankOf_t_usd;
     //Edit: Push & Pull
-    function _pushBankOf_t_usd(address asset, address pool, uint8 dec, address u, address lp) public onlyOwner 
+    function _pushBankOf_t_usd(address asset, address pool, uint8 dec, address u, address lp) public onlyOwner
     {
         _bankOf_t_usd.push(t_usd({asset: asset, pool: pool, dec: dec, u: u, lp: lp}));
     }
 
-    function _pullBankOf_t_usd(uint n) public onlyOwner 
+    function _pullBankOf_t_usd(uint n) public onlyOwner
     {
         _bankOf_t_usd[n] = _bankOf_t_usd[_bankOf_t_usd.length - 1];
         _bankOf_t_usd.pop();
@@ -205,25 +205,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_t_usd(t_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_t_usd(q.u, q.lp)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_t_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_t_usd(_bankOf_t_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_t_usd(_bankOf_t_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_t_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_t_usd.length; i++)
-        {tvl += tvlOf_t_usd(_bankOf_t_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_t_usd(_bankOf_t_usd[i]);}
+        return _tvl;
     }
 
 
@@ -264,7 +264,7 @@ contract TvlOracle is Ownable
         _bankOf_t_coin_usd.push(t_coin_usd({asset: asset, pool: pool, dec: dec, lp: lp}));
     }
 
-    function _pullBankOf_t_coin_usd(uint n) public onlyOwner 
+    function _pullBankOf_t_coin_usd(uint n) public onlyOwner
     {
         _bankOf_t_coin_usd[n] = _bankOf_t_coin_usd[_bankOf_t_coin_usd.length - 1];
         _bankOf_t_coin_usd.pop();
@@ -272,25 +272,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_t_coin_usd(t_coin_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_t_coin_usd(q.lp)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_t_coin_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_t_coin_usd(_bankOf_t_coin_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_t_coin_usd(_bankOf_t_coin_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_t_coin_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_t_coin_usd.length; i++)
-        {tvl += tvlOf_t_coin_usd(_bankOf_t_coin_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_t_coin_usd(_bankOf_t_coin_usd[i]);}
+        return _tvl;
     }
 
 
@@ -336,12 +336,12 @@ contract TvlOracle is Ownable
     //Bank
     t_tt_usd[] public _bankOf_t_tt_usd;
     //Edit: Push & Pull
-    function _pushBankOf_t_tt_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_bt_u, address u) public onlyOwner 
+    function _pushBankOf_t_tt_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_bt_u, address u) public onlyOwner
     {
         _bankOf_t_tt_usd.push(t_tt_usd({asset: asset, pool: pool, dec: dec, lp_tt: lp_tt, lp_bt_u: lp_bt_u, u: u}));
     }
 
-    function _pullBankOf_t_tt_usd(uint n) public onlyOwner 
+    function _pullBankOf_t_tt_usd(uint n) public onlyOwner
     {
         _bankOf_t_tt_usd[n] = _bankOf_t_tt_usd[_bankOf_t_tt_usd.length - 1];
         _bankOf_t_tt_usd.pop();
@@ -349,25 +349,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_t_tt_usd(t_tt_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_t_tt_usd(q.asset, q.lp_tt, q.lp_bt_u, q.u)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_t_tt_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_t_tt_usd(_bankOf_t_tt_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_t_tt_usd(_bankOf_t_tt_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_t_tt_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_t_tt_usd.length; i++)
-        {tvl += tvlOf_t_tt_usd(_bankOf_t_tt_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_t_tt_usd(_bankOf_t_tt_usd[i]);}
+        return _tvl;
     }
 
 
@@ -404,10 +404,10 @@ contract TvlOracle is Ownable
     //Bank
     t_tt_coin_usd[] public _bankOf_t_tt_coin_usd;
     //Edit: Push & Pull
-    function _pushBankOf_t_tt_coin_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_bt_f) public onlyOwner 
+    function _pushBankOf_t_tt_coin_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_bt_f) public onlyOwner
     {_bankOf_t_tt_coin_usd.push(t_tt_coin_usd({asset: asset, pool: pool, dec: dec, lp_tt: lp_tt, lp_bt_f: lp_bt_f}));}
 
-    function _pullBankOf_t_tt_coin_usd(uint n) public onlyOwner 
+    function _pullBankOf_t_tt_coin_usd(uint n) public onlyOwner
     {
         _bankOf_t_tt_coin_usd[n] = _bankOf_t_tt_coin_usd[_bankOf_t_tt_coin_usd.length - 1];
         _bankOf_t_tt_coin_usd.pop();
@@ -415,25 +415,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_t_tt_coin_usd(t_tt_coin_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_t_tt_coin_usd(q.asset, q.lp_tt, q.lp_bt_f)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_t_tt_coin_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_t_tt_coin_usd(_bankOf_t_tt_coin_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_t_tt_coin_usd(_bankOf_t_tt_coin_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_t_tt_coin_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_t_tt_coin_usd.length; i++)
-        {tvl += tvlOf_t_tt_coin_usd(_bankOf_t_tt_coin_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_t_tt_coin_usd(_bankOf_t_tt_coin_usd[i]);}
+        return _tvl;
     }
 
 
@@ -457,10 +457,10 @@ contract TvlOracle is Ownable
     //Bank
     lpt_usd[] public _bankOf_lpt_usd;
     //Edit: Push & Pull
-    function _pushBankOf_lpt_usd(address asset, address pool, uint8 dec, address u, address lp) public onlyOwner 
+    function _pushBankOf_lpt_usd(address asset, address pool, uint8 dec, address u, address lp) public onlyOwner
     {_bankOf_lpt_usd.push(lpt_usd({asset: asset, pool: pool, dec: dec, u: u, lp: lp}));}
 
-    function _pullBankOf_lpt_usd(uint n) public onlyOwner 
+    function _pullBankOf_lpt_usd(uint n) public onlyOwner
     {
         _bankOf_lpt_usd[n] = _bankOf_lpt_usd[_bankOf_lpt_usd.length - 1];
         _bankOf_lpt_usd.pop();
@@ -468,25 +468,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_lpt_usd(lpt_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_lpt_usd(q.lp, q.lp)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_lpt_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_lpt_usd(_bankOf_lpt_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_lpt_usd(_bankOf_lpt_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_lpt_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_lpt_usd.length; i++)
-        {tvl += tvlOf_lpt_usd(_bankOf_lpt_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_lpt_usd(_bankOf_lpt_usd[i]);}
+        return _tvl;
     }
 
 
@@ -515,12 +515,12 @@ contract TvlOracle is Ownable
     //Bank
     lpt_coin_usd[] public _bankOf_lpt_coin_usd;
     //Edit: Push & Pull
-    function _pushBankOf_lpt_coin_usd(address asset, address pool, uint8 dec, address lp) public onlyOwner 
+    function _pushBankOf_lpt_coin_usd(address asset, address pool, uint8 dec, address lp) public onlyOwner
     {
         _bankOf_lpt_coin_usd.push(lpt_coin_usd({asset: asset, pool: pool, dec: dec, lp: lp}));
     }
 
-    function _pullBankOf_lpt_coin_usd(uint n) public onlyOwner 
+    function _pullBankOf_lpt_coin_usd(uint n) public onlyOwner
     {
         _bankOf_lpt_coin_usd[n] = _bankOf_lpt_coin_usd[_bankOf_lpt_coin_usd.length - 1];
         _bankOf_lpt_coin_usd.pop();
@@ -528,25 +528,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_lpt_coin_usd(lpt_coin_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_lpt_coin_usd(q.lp)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_lpt_coin_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_lpt_coin_usd(_bankOf_lpt_coin_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_lpt_coin_usd(_bankOf_lpt_coin_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_lpt_coin_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_lpt_coin_usd.length; i++)
-        {tvl += tvlOf_lpt_coin_usd(_bankOf_lpt_coin_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_lpt_coin_usd(_bankOf_lpt_coin_usd[i]);}
+        return _tvl;
     }
 
 
@@ -574,12 +574,12 @@ contract TvlOracle is Ownable
     //Bank
     lpt_tt_usd[] public _bankOf_lpt_tt_usd;
     //Edit: Push & Pull
-    function _pushBankOf_lpt_tt_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_tt_b, address lp_bt_u, address u) public onlyOwner 
+    function _pushBankOf_lpt_tt_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_tt_b, address lp_bt_u, address u) public onlyOwner
     {
         _bankOf_lpt_tt_usd.push(lpt_tt_usd({asset: asset, pool: pool, dec: dec, lp_tt: lp_tt, lp_tt_b: lp_tt_b, lp_bt_u: lp_bt_u, u: u}));
     }
 
-    function _pullBankOf_lpt_tt_usd(uint n) public onlyOwner 
+    function _pullBankOf_lpt_tt_usd(uint n) public onlyOwner
     {
         _bankOf_lpt_tt_usd[n] = _bankOf_lpt_tt_usd[_bankOf_lpt_tt_usd.length - 1];
         _bankOf_lpt_tt_usd.pop();
@@ -587,26 +587,26 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_lpt_tt_usd(lpt_tt_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_lpt_tt_usd(q.lp_tt_b, q.lp_tt, q.lp_bt_u, q.u)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_lpt_tt_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_lpt_tt_usd(_bankOf_lpt_tt_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_lpt_tt_usd(_bankOf_lpt_tt_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_lpt_tt_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_lpt_tt_usd.length; i++) {
-            tvl += tvlOf_lpt_tt_usd(_bankOf_lpt_tt_usd[i]);
+            _tvl += tvlOf_lpt_tt_usd(_bankOf_lpt_tt_usd[i]);
         }
-        return tvl;
+        return _tvl;
     }
 
 
@@ -632,10 +632,10 @@ contract TvlOracle is Ownable
     //Bank
     lpt_tt_coin_usd[] public _bankOf_lpt_tt_coin_usd;
     //Edit: Push & Pull
-    function _pushBankOf_lpt_tt_coin_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_tt_b, address lp_bt_f) public onlyOwner 
+    function _pushBankOf_lpt_tt_coin_usd(address asset, address pool, uint8 dec, address lp_tt, address lp_tt_b, address lp_bt_f) public onlyOwner
     {_bankOf_lpt_tt_coin_usd.push(lpt_tt_coin_usd({asset: asset, pool: pool, dec: dec, lp_tt: lp_tt, lp_tt_b: lp_tt_b, lp_bt_f: lp_bt_f}));}
 
-    function _pullBankOf_lpt_tt_coin_usd(uint n) public onlyOwner 
+    function _pullBankOf_lpt_tt_coin_usd(uint n) public onlyOwner
     {
         _bankOf_lpt_tt_coin_usd[n] = _bankOf_lpt_tt_coin_usd[_bankOf_lpt_tt_coin_usd.length - 1];
         _bankOf_lpt_tt_coin_usd.pop();
@@ -643,25 +643,25 @@ contract TvlOracle is Ownable
     //Universal TVL Finder
     function tvlOf_lpt_tt_coin_usd(lpt_tt_coin_usd memory q) public view returns (uint256)
     {
-        uint256 tvl = (
+        uint256 _tvl = (
             LPT(q.asset).balanceOf(q.pool) * 10 ** (18 - q.dec)
             * p_lpt_tt_coin_usd(q.lp_tt_b, q.lp_tt, q.lp_bt_f)
         ) / 1e18;
-        return tvl;
+        return _tvl;
     }
     //Self.TVL Finder
     function _tvlOf_lpt_tt_coin_usd(uint256 n) public view returns (uint256)
     {
-        uint256 tvl = tvlOf_lpt_tt_coin_usd(_bankOf_lpt_tt_coin_usd[n]);
-        return tvl;
+        uint256 _tvl = tvlOf_lpt_tt_coin_usd(_bankOf_lpt_tt_coin_usd[n]);
+        return _tvl;
     }
     //Self.TVL.total
     function _tvl_lpt_tt_coin_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
         for (uint i; i < _bankOf_lpt_tt_coin_usd.length; i++)
-        {tvl += tvlOf_lpt_tt_coin_usd(_bankOf_lpt_tt_coin_usd[i]);}
-        return tvl;
+        {_tvl += tvlOf_lpt_tt_coin_usd(_bankOf_lpt_tt_coin_usd[i]);}
+        return _tvl;
     }
 
 
@@ -696,7 +696,7 @@ contract TvlOracle is Ownable
         uint256[] memory _lpt_coin_usd,
         uint256[] memory _lpt_tt_usd,
         uint256[] memory _lpt_tt_coin_usd
-    ) public onlyOwner 
+    ) public onlyOwner
     {
         _bankOf_pool2_usd_e_usd = _e_usd;
         _bankOf_pool2_usd_coin_usd = _coin_usd;
@@ -716,41 +716,41 @@ contract TvlOracle is Ownable
     //Self.TVL.total
     function _tvl_pool2_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
 
 
         for (uint i; i < _bankOf_pool2_usd_e_usd.length; i++)
-        {tvl += _tvlOf_e_usd(_bankOf_pool2_usd_e_usd[i]);}
+        {_tvl += _tvlOf_e_usd(_bankOf_pool2_usd_e_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_coin_usd.length; i++)
-        {tvl += _tvlOf_coin_usd(_bankOf_pool2_usd_coin_usd[i]);}
+        {_tvl += _tvlOf_coin_usd(_bankOf_pool2_usd_coin_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_t_usd.length; i++)
-        {tvl += _tvlOf_t_usd(_bankOf_pool2_usd_t_usd[i]);}
+        {_tvl += _tvlOf_t_usd(_bankOf_pool2_usd_t_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_t_coin_usd.length; i++)
-        {tvl += _tvlOf_t_coin_usd(_bankOf_pool2_usd_t_coin_usd[i]);}
+        {_tvl += _tvlOf_t_coin_usd(_bankOf_pool2_usd_t_coin_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_t_tt_usd.length; i++)
-        {tvl += _tvlOf_t_tt_usd(_bankOf_pool2_usd_t_tt_usd[i]);}
+        {_tvl += _tvlOf_t_tt_usd(_bankOf_pool2_usd_t_tt_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_t_tt_coin_usd.length; i++)
-        {tvl += _tvlOf_t_tt_coin_usd(_bankOf_pool2_usd_t_tt_coin_usd[i]);}
+        {_tvl += _tvlOf_t_tt_coin_usd(_bankOf_pool2_usd_t_tt_coin_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_lpt_usd.length; i++)
-        {tvl += _tvlOf_lpt_usd(_bankOf_pool2_usd_lpt_usd[i]);}
+        {_tvl += _tvlOf_lpt_usd(_bankOf_pool2_usd_lpt_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_lpt_coin_usd.length; i++)
-        {tvl += _tvlOf_lpt_coin_usd(_bankOf_pool2_usd_lpt_coin_usd[i]);}
+        {_tvl += _tvlOf_lpt_coin_usd(_bankOf_pool2_usd_lpt_coin_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_lpt_tt_usd.length; i++)
-        {tvl += _tvlOf_lpt_tt_usd(_bankOf_pool2_usd_lpt_tt_usd[i]);}
+        {_tvl += _tvlOf_lpt_tt_usd(_bankOf_pool2_usd_lpt_tt_usd[i]);}
 
         for (uint i; i < _bankOf_pool2_usd_lpt_tt_coin_usd.length; i++)
-        {tvl += _tvlOf_lpt_tt_coin_usd(_bankOf_pool2_usd_lpt_tt_coin_usd[i]);}
+        {_tvl += _tvlOf_lpt_tt_coin_usd(_bankOf_pool2_usd_lpt_tt_coin_usd[i]);}
 
 
-        return tvl;
+        return _tvl;
     }
 
 
@@ -784,7 +784,7 @@ contract TvlOracle is Ownable
         uint256[] memory _lpt_coin_usd,
         uint256[] memory _lpt_tt_usd,
         uint256[] memory _lpt_tt_coin_usd
-    ) public onlyOwner 
+    ) public onlyOwner
     {
         _bankOf_staking_usd_e_usd = _e_usd;
         _bankOf_staking_usd_coin_usd = _coin_usd;
@@ -804,41 +804,41 @@ contract TvlOracle is Ownable
     //Self.TVL.total
     function _tvl_staking_usd() public view returns (uint256)
     {
-        uint256 tvl;
+        uint256 _tvl;
 
 
         for (uint i; i < _bankOf_staking_usd_e_usd.length; i++)
-        {tvl += _tvlOf_e_usd(_bankOf_staking_usd_e_usd[i]);}
+        {_tvl += _tvlOf_e_usd(_bankOf_staking_usd_e_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_coin_usd.length; i++)
-        {tvl += _tvlOf_coin_usd(_bankOf_staking_usd_coin_usd[i]);}
+        {_tvl += _tvlOf_coin_usd(_bankOf_staking_usd_coin_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_t_usd.length; i++)
-        {tvl += _tvlOf_t_usd(_bankOf_staking_usd_t_usd[i]);}
+        {_tvl += _tvlOf_t_usd(_bankOf_staking_usd_t_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_t_coin_usd.length; i++)
-        {tvl += _tvlOf_t_coin_usd(_bankOf_staking_usd_t_coin_usd[i]);}
+        {_tvl += _tvlOf_t_coin_usd(_bankOf_staking_usd_t_coin_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_t_tt_usd.length; i++)
-        {tvl += _tvlOf_t_tt_usd(_bankOf_staking_usd_t_tt_usd[i]);}
+        {_tvl += _tvlOf_t_tt_usd(_bankOf_staking_usd_t_tt_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_t_tt_coin_usd.length; i++)
-        {tvl += _tvlOf_t_tt_coin_usd(_bankOf_staking_usd_t_tt_coin_usd[i]);}
+        {_tvl += _tvlOf_t_tt_coin_usd(_bankOf_staking_usd_t_tt_coin_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_lpt_usd.length; i++)
-        {tvl += _tvlOf_lpt_usd(_bankOf_staking_usd_lpt_usd[i]);}
+        {_tvl += _tvlOf_lpt_usd(_bankOf_staking_usd_lpt_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_lpt_coin_usd.length; i++)
-        {tvl += _tvlOf_lpt_coin_usd(_bankOf_staking_usd_lpt_coin_usd[i]);}
+        {_tvl += _tvlOf_lpt_coin_usd(_bankOf_staking_usd_lpt_coin_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_lpt_tt_usd.length; i++)
-        {tvl += _tvlOf_lpt_tt_usd(_bankOf_staking_usd_lpt_tt_usd[i]);}
+        {_tvl += _tvlOf_lpt_tt_usd(_bankOf_staking_usd_lpt_tt_usd[i]);}
 
         for (uint i; i < _bankOf_staking_usd_lpt_tt_coin_usd.length; i++)
-        {tvl += _tvlOf_lpt_tt_coin_usd(_bankOf_staking_usd_lpt_tt_coin_usd[i]);}
+        {_tvl += _tvlOf_lpt_tt_coin_usd(_bankOf_staking_usd_lpt_tt_coin_usd[i]);}
 
 
-        return tvl;
+        return _tvl;
     }
 
     //EXPORTS
@@ -891,10 +891,10 @@ contract TvlOracle is Ownable
      * Please keep this notice intact if you fork, reuse or derive codes from this contract.
 
      */
-    function rescue(address tokenAddress, uint256 tokens) public onlyOwner 
+    function rescue(address tokenAddress, uint256 tokens) public onlyOwner
     {
         if (tokenAddress == address(0)) {
-            owner().call{value: tokens}("");
+            payable(owner()).transfer(tokens);
         } else if (tokenAddress != address(0)) {
             LPT(tokenAddress).transfer(owner(), tokens);
         }

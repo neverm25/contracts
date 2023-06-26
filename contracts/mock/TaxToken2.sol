@@ -1,6 +1,6 @@
 import "../interfaces/IERC20.sol";
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.9;
+pragma solidity =0.8.13;
 
 interface IUniswapV2Router02 {
     function weth() external returns(address);

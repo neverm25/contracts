@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import {Base64} from "contracts/libraries/Base64.sol";
 import {IVeArtProxy} from "contracts/interfaces/IVeArtProxy.sol";

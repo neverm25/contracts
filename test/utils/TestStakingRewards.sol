@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8;
 
-import 'contracts/interfaces/IERC20.sol';
+import "contracts/interfaces/IERC20.sol";
 
 contract TestStakingRewards {
     IERC20 public rewardsToken;

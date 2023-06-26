@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/libraries/Math.sol';
 import 'contracts/interfaces/IBribe.sol';
-import 'contracts/interfaces/IERC20.sol';
+import "contracts/interfaces/IERC20.sol";
 import 'contracts/interfaces/IGauge.sol';
 import 'contracts/interfaces/IVoter.sol';
 import 'contracts/interfaces/IVotingEscrow.sol';

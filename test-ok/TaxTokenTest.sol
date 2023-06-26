@@ -1,12 +1,12 @@
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import './BaseTest.sol';
-import "contracts/mock/TaxToken2.sol";
+import "contracts/mock/TaxToken.sol";
 
-contract TaxToken2Test is BaseTest {
+contract TaxTokenTest is BaseTest {
 
     Pair _pair;
-    TaxToken2 taxToken;
+    TaxToken taxToken;
 
     uint TAX_TOKEN_100K = 100_000 * 1e9;
     uint TAX_TOKEN_1 = 1e9;
@@ -17,8 +17,8 @@ contract TaxToken2Test is BaseTest {
         factory = new PairFactory();
         WETH = new TestWETH();
         router2 = new Router2(address(factory), address(WETH));
-        taxToken = new TaxToken2();
-        taxToken.initializeRouter(address(router2));
+        taxToken = new TaxToken(address(this));
+        taxToken.initialize(address(router2));
         _pair = Pair(factory.getPair(address(taxToken), address(WETH), false));
     }
 

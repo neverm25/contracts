@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 import "contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -60,7 +60,7 @@ contract TaxToken is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
 
-    constructor ( address mintSupplyTo ) public {
+    constructor ( address mintSupplyTo ) {
         _rOwned[mintSupplyTo] = _rTotal;
 
         //exclude owner and this contract from fee

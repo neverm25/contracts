@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 library Math {
     function max(uint a, uint b) internal pure returns (uint) {

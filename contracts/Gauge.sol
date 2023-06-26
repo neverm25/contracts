@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/libraries/Math.sol';
 import 'contracts/interfaces/IBribe.sol';
-import 'contracts/interfaces/IERC20.sol';
+import "contracts/interfaces/IERC20.sol";
 import 'contracts/interfaces/IGauge.sol';
 import 'contracts/interfaces/IPair.sol';
 import 'contracts/interfaces/IVoter.sol';
@@ -91,22 +91,24 @@ contract Gauge is IGauge {
     event ClaimRewards(address indexed from, address indexed reward, uint amount);
 
     // algebra integration:
+    bool public isAlgebra;
     address public feeVault;
 
-    constructor(address _stake, address _internal_bribe, address _external_bribe, address __ve, address _voter, bool _forPair, address[] memory _allowedRewardTokens, address _feeVault) {
-        stake = _stake;
-        internal_bribe = _internal_bribe;
-        external_bribe = _external_bribe;
-        _ve = __ve;
-        ve = IVotingEscrow(__ve);
-        voter = _voter;
-        isForPair = _forPair;
-        feeVault = _feeVault;
+    constructor(address pool_, address internal_bribe_, address external_bribe_, address ve_, address voter_, bool isPair_, address[] memory allowedRewardTokens_, address feeVault_) {
+        stake = pool_;
+        internal_bribe = internal_bribe_;
+        external_bribe = external_bribe_;
+        _ve = ve_;
+        ve = IVotingEscrow(ve_);
+        voter = voter_;
+        isForPair = isPair_;
+        isAlgebra = feeVault_ != address(0);
+        feeVault = feeVault_;
 
-        for (uint i; i < _allowedRewardTokens.length; i++) {
-            if (_allowedRewardTokens[i] != address(0)) {
-                isReward[_allowedRewardTokens[i]] = true;
-                rewards.push(_allowedRewardTokens[i]);
+        for (uint i; i < allowedRewardTokens_.length; i++) {
+            if (allowedRewardTokens_[i] != address(0)) {
+                isReward[allowedRewardTokens_[i]] = true;
+                rewards.push(allowedRewardTokens_[i]);
             }
         }
     }
@@ -129,7 +131,7 @@ contract Gauge is IGauge {
             return (0, 0);
         }
 
-        if( address(feeVault) != address(0) ) {
+        if( isAlgebra ) {
             // claim from Algebra
             (claimed0, claimed1) = IFeeVault(feeVault).claimFees();
         } else {
@@ -143,8 +145,8 @@ contract Gauge is IGauge {
             uint _fees0 = fees0 + claimed0;
             uint _fees1 = fees1 + claimed1;
             if( address(feeVault) != address(0) ) {
-                _token0 = IPairInfo(_token).token0();
-                _token1 = IPairInfo(_token).token1();
+                _token0 = IPairInfo(stake).token0();
+                _token1 = IPairInfo(stake).token1();
             } else {
                 (_token0, _token1) = IPair(stake).tokens();
             }
@@ -633,30 +635,15 @@ contract Gauge is IGauge {
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
 
-    function setFeeVault(address _feeVault) external {
+    function setFeeVault(address feeVault_) external {
         require(msg.sender == ve.team(), 'only team');
-        feeVault = _feeVault;
+        feeVault = feeVault_;
     }
 
     modifier isNotEmergency() {
         require(!ve.isEmergency(), 'emergency mode');
         _;
     }
-
-
-    function emergencyWithdraw() external lock {
-        //TODO: create test-case for this scenario.
-        require(ve.isEmergency(), 'only in emergency mode');
-        require(_balances[msg.sender] > 0, "no balances");
-
-        uint256 _amount = _balances[msg.sender];
-        _totalSupply = _totalSupply - (_amount);
-        _balances[msg.sender] = 0;
-
-        _safeTransfer(stake, msg.sender, _amount);
-        emit Withdraw(msg.sender, _amount);
-    }
-
 
     function setGaugeRewarder(address _gaugeRewarder) external {
         require(msg.sender == ve.team(), 'only team');

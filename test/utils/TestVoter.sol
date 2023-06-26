@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 contract TestVoter {
 
@@ -20,10 +20,10 @@ contract TestVoter {
       }
 
       function distribute(address _gauge) external {
-          
+
       }
 
-      function isWhitelisted(address token) public returns (bool) {
+      function isWhitelisted(address /*token*/) public pure returns (bool) {
             return true;
       }
 }

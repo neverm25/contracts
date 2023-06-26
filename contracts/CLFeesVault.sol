@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/libraries/SafeERC20.sol";
+import "contracts/interfaces/IERC20.sol";
 
 import './interfaces/IPairInfo.sol';
 import './interfaces/IBribe.sol';
 import './interfaces/IVoter.sol';
 import './interfaces/IPairFactory.sol';
 import "./libraries/Math.sol";
+
+/**
+ * @title CLFeesVault
+ * @dev Contract to manage fees collected by the Curve Liquidity Gauge.
+ */
 
 contract CLFeesVault is Ownable {
     using SafeERC20 for IERC20;
@@ -25,15 +28,52 @@ contract CLFeesVault is Ownable {
     address public pool;
     IPairFactory public pairFactory;
 
+    /**
+     * @dev Modifier to restrict function access to the Gauge contract.
+     */
+
     modifier onlyGauge() {
         require(voter.isGauge(msg.sender),'not gauge contract');
         _;
     }
 
+    /**
+     * @dev Event emitted when fees are collected.
+     * @param totAmount0 Total amount of token0 collected.
+     * @param totAmount1 Total amount of token1 collected.
+     * @param token0 Address of token0.
+     * @param token1 Address of token1.
+     * @param pool Address of the pool.
+     * @param timestamp Timestamp of the event.
+     */
     event Fees(uint256 totAmount0,uint256 totAmount1, address indexed token0, address indexed token1, address indexed pool, uint timestamp);
+
+    /**
+     * @dev Event emitted when fees are collected for token0.
+     * @param gamma Amount of fees collected for gamma.
+     * @param referral Amount of fees collected for referral.
+     * @param nft Amount of fees collected for NFT.
+     * @param gauge Amount of fees collected for Gauge.
+     * @param token Address of the token.
+     */
     event Fees0(uint gamma, uint referral, uint nft, uint gauge, address indexed token);
+
+    /**
+     * @dev Event emitted when fees are collected for token1.
+     * @param gamma Amount of fees collected for gamma.
+     * @param referral Amount of fees collected for referral.
+     * @param nft Amount of fees collected for NFT.
+     * @param gauge Amount of fees collected for Gauge.
+     * @param token Address of the token.
+     */
     event Fees1(uint gamma, uint referral, uint nft, uint gauge, address indexed token);
 
+    /**
+     * @dev Constructor function for the CLFeesVault contract.
+     * @param _pool Address of the pool.
+     * @param _pairFactory Address of the pair factory.
+     * @param _voter Address of the voter contract.
+     */
     constructor(address _pool, address _pairFactory, address _voter) {
         pairFactory = IPairFactory(_pairFactory);
         pool = _pool;
@@ -65,7 +105,7 @@ contract CLFeesVault is Ownable {
         if(_amount0 > 0){
 
             if(gauge0 > 0) IERC20(t0).safeTransfer(msg.sender, gauge0);
-            if(gamma > 0) IERC20(t0).safeTransfer(pairFactory.gammaRecipient(), gamma);
+            if(gamma > 0) IERC20(t0).safeTransfer(pairFactory.gammaFeeRecipient(), gamma);
             if(nft > 0) IERC20(t0).safeTransfer(pairFactory.stakingNftFeeHandler(), nft);
             if(referral > 0) IERC20(t0).safeTransfer(pairFactory.dibs(), referral);
             emit Fees0(gamma, referral, nft, gauge0, t0);
@@ -78,7 +118,7 @@ contract CLFeesVault is Ownable {
         (gamma, referral, nft, gauge1) = getFees(_amount1);
         if(_amount1 > 0){
             if(gauge1 > 0) IERC20(t1).safeTransfer(msg.sender, gauge1);
-            if(gamma > 0) IERC20(t1).safeTransfer(pairFactory.gammaRecipient(), gamma);
+            if(gamma > 0) IERC20(t1).safeTransfer(pairFactory.gammaFeeRecipient(), gamma);
             if(nft > 0) IERC20(t1).safeTransfer(pairFactory.stakingNftFeeHandler(), nft);
             if(referral > 0) IERC20(t1).safeTransfer(pairFactory.dibs(), referral);
             emit Fees1(gamma, referral, nft, gauge1, t1);

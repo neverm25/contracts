@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/interfaces/IPairFactory.sol';
 import 'contracts/Pair.sol';
@@ -46,14 +46,13 @@ contract PairFactory is IPairFactory {
     event FeeManagerSet(address _feeManager);
     event GammaShareSet(uint256 _gammaShare);
 
-    constructor( address _gammaFeeRecipient ) {
-        require(_gammaFeeRecipient != address(0), "zero address");
+    constructor() {
         pauser = msg.sender;
         isPaused = false;
         feeManager = msg.sender;
         stableFee = 4; // 0.04%
         volatileFee = 30;
-        gammaFeeRecipient = _gammaFeeRecipient;
+        gammaFeeRecipient = msg.sender;
         stakingNFTFee = 3000; // 30% of stable/volatileFee
         referralFee = 1200; // 12%
 

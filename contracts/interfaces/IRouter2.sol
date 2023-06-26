@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import "contracts/interfaces/IRouter.sol";
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 interface IRouter2 is IRouter {
     function weth() external returns(address);

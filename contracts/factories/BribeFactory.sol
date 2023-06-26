@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import "contracts/interfaces/IBribeFactory.sol";
 import 'contracts/InternalBribe.sol';
@@ -11,10 +11,8 @@ contract BribeFactory is IBribeFactory {
     address[] private _internal_bribes;
     address[] private _external_bribes;
 
-    event BribeCreated(address bribe, address[] memory allowedRewards);
-    constructor(address[] memory _defaultRewardToken){
-        defaultRewardToken = _defaultRewardToken;
-    }
+    event BribeCreated(address bribe, address[] allowedRewards);
+
     function createInternalBribe(address[] memory allowedRewards) external returns (address) {
         last_internal_bribe = address(new InternalBribe(msg.sender, allowedRewards));
         _internal_bribes.push(last_internal_bribe);

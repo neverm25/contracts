@@ -1,11 +1,11 @@
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import "ds-test/test.sol";
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import "solmate/test/utils/mocks/MockERC20.sol";
 import "contracts/BulkSender.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/interfaces/IERC20.sol";
 
 interface CheatCodes {
     // Gets address for a given private key, (privateKey) => (address)

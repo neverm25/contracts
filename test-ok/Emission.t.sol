@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
@@ -28,9 +28,7 @@ import "utils/TestToken.sol";
 import "utils/TestVoter.sol";
 import "utils/TestVotingEscrow.sol";
 import "utils/TestWETH.sol";
-import "contracts/veSplitter.sol";
-
-contract veSplitterTest is Test {
+contract Emission is Test {
     TestWETH WETH;
     MockERC20 DAI;
     uint TOKEN_100 = 100 * 1e18;
@@ -49,9 +47,6 @@ contract veSplitterTest is Test {
     Pair pool_eth_vara;
     address[] whitelist;
     Gauge gauge_eth_vara;
-
-    veSplitter main;
-    uint tokenId;
     function setUp() public {
         vara = new Vara();
         gaugeFactory = new GaugeFactory();
@@ -91,20 +86,14 @@ contract veSplitterTest is Test {
         router.addLiquidityETH{value : TOKEN_100}(address(DAI), false, TOKEN_100, 0, 0, address(this), block.timestamp);
         router.addLiquidityETH{value : TOKEN_100}(address(vara), false, TOKEN_100, 0, 0, address(this), block.timestamp);
 
-        pool_eth_dai = Pair(pairFactory.getPair(address(WETH), address(DAI), false));
-        pool_eth_vara = Pair(pairFactory.getPair(address(WETH), address(vara), false));
-
-        address[] memory emptyAddresses = new address[](1);
-        emptyAddresses[0] = address(this);
-        uint[] memory emptyAmounts = new uint[](1);
-        emptyAmounts[0] = 1e18;
-        minter.initialize(emptyAddresses, emptyAmounts, 1e18);
-
-        main = new veSplitter( address(voter) );
-
+        pool_eth_dai = Pair( pairFactory.getPair(address(WETH),address(DAI), false) );
+        pool_eth_vara = Pair( pairFactory.getPair(address(WETH),address(vara), false) );
     }
-
-    function runEpochs() public {
+    function getEpoch() public returns(uint){
+        InternalBribe bribe = InternalBribe(gauge_eth_vara.internal_bribe());
+        return bribe.getEpochStart(block.timestamp);
+    }
+    function testExec() public {
         vm.warp(block.timestamp + 86400 * 7);
         vm.roll(block.number + 1);
 
@@ -112,79 +101,35 @@ contract veSplitterTest is Test {
         vm.roll(block.number + 1);
         uint duration = 4 * 365 * 86400;
         vara.approve(address(escrow), vara.balanceOf(address(this)));
-        tokenId = escrow.create_lock(vara.balanceOf(address(this)), duration);
+        uint id = escrow.create_lock(vara.balanceOf(address(this)), duration);
 
         address[] memory pools = new address[](1);
         pools[0] = address(pool_eth_vara);
-        uint256[] memory locks = new uint256[](1);
-        locks[0] = 5000;
-
+        uint256[] memory weights = new uint256[](1);
+        weights[0] = 5000;
+        console.log('epoch 0', getEpoch());
         vm.warp(block.timestamp + 86400 * 3);
         vm.roll(block.number + 1);
-
-        voter.vote(tokenId, pools, locks);
+        voter.vote(id, pools, weights);
         voter.distro();
-
+        console.log('epoch 0', getEpoch());
+        vm.warp(block.timestamp + (86400 * 4)+ 1 );
         vm.roll(block.number + 1);
+        console.log('epoch 1', getEpoch());
 
+        address[] memory emptyAddresses = new address[](1);
+        emptyAddresses[0] = address(this);
+        uint[] memory emptyAmounts = new uint[](1);
+        emptyAmounts[0] = 1e18;
+        minter.initialize(emptyAddresses, emptyAmounts, 1e18);
+        console.log('a', vara.balanceOf(address(this))/1e18);
         voter.distro();
-
-        vm.warp(block.timestamp + (86400 * 7) + 1);
+        console.log('b', vara.balanceOf(address(this))/1e18);
+        vm.warp(block.timestamp + (86400 * 7)+ 1 );
         vm.roll(block.number + 1);
-
+        console.log('epoch 2', getEpoch());
         voter.distro();
-    }
-
-    function testExec() public {
-        runEpochs();
-
-        pool_eth_vara.approve(address(gauge_eth_vara), pool_eth_vara.balanceOf(address(this)));
-        gauge_eth_vara.depositAll(tokenId);
-
-        uint[] memory amounts = new uint[](2);
-        amounts[0] = 1 ether;
-        amounts[1] = 2 ether;
-        uint[] memory locks = new uint[](2);
-        locks[0] = 7 days;
-        locks[1] = 14 days;
-
-        voter.poke(tokenId);
-
-        vm.expectRevert(abi.encodePacked(veSplitter.TokenIdIsAttached.selector));
-        main.split(amounts, locks, tokenId);
-
-        voter.reset(tokenId);
-        gauge_eth_vara.withdrawAll();
-
-        vm.expectRevert(abi.encodePacked(veSplitter.NftNotApproved.selector));
-        main.split(amounts, locks, tokenId);
-        escrow.approve(address(main), tokenId);
-
-        uint[] memory amountsInvalid = new uint[](2);
-        amountsInvalid[0] = 1 ether;
-        amountsInvalid[1] = 1 ether;
-        uint[] memory locksInvalid = new uint[](1);
-        locksInvalid[0] = 1 days;
-
-        vm.expectRevert(abi.encodePacked(veSplitter.InvalidAmountAndLocksData.selector));
-        main.split(amountsInvalid, locksInvalid, tokenId);
-
-        vm.expectRevert(abi.encodePacked(veSplitter.NftLocked.selector));
-        main.split(amounts, locks, tokenId);
-
-        uint duration = 4 * 365 * 86400;
-        vm.warp(block.timestamp + duration + 1);
-        vm.roll(block.number + 1);
-
-        uint balanceOfTokenBefore = vara.balanceOf(address(this));
-        main.split(amounts, locks, tokenId);
-
-        uint balanceOfNft = escrow.balanceOf(address(this));
-        assert( balanceOfNft == 3 );
-        uint balanceOfTokenAfter = vara.balanceOf(address(this));
-        uint tokensReceived = balanceOfTokenAfter - balanceOfTokenBefore;
-        assert( tokensReceived == 39999897000000000000000000);
-
+        console.log('c', vara.balanceOf(address(this))/1e18);
     }
 
 }

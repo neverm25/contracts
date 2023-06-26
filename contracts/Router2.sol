@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/libraries/Math.sol';
-import 'contracts/interfaces/IERC20.sol';
+import "contracts/interfaces/IERC20.sol";
 import 'contracts/interfaces/IPair.sol';
 import 'contracts/interfaces/IPairFactory.sol';
 import 'contracts/interfaces/IRouter.sol';
@@ -62,14 +62,14 @@ contract Router2 is Router {
     // requires the initial amount to have already been sent to the first pair
     function _swapSupportingFeeOnTransferTokens(route[] memory routes, address _to) internal virtual {
         for (uint i; i < routes.length; i++) {
-            (address input, address output, bool stable) = (routes[i].from, routes[i].to, routes[i].stable);
+            (address input, address output, ) = (routes[i].from, routes[i].to, routes[i].stable);
             (address token0,) = sortTokens(input, output);
             IBaseV1Pair pair = IBaseV1Pair(pairFor(routes[i].from, routes[i].to, routes[i].stable));
             uint amountInput;
             uint amountOutput;
             { // scope to avoid stack too deep errors
                 (uint reserve0, uint reserve1,) = pair.getReserves();
-                (uint reserveInput, uint reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+                (uint reserveInput, ) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
                 amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
                 //(amountOutput,) = getAmountOut(amountInput, input, output, stable);
                 amountOutput = pair.getAmountOut(amountInput, input);

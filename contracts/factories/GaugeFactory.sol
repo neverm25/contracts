@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import 'contracts/interfaces/IGaugeFactory.sol';
 import 'contracts/Gauge.sol';
-import "../CLFeesVault.sol";
+import "contracts/CLFeesVault.sol";
 
 contract GaugeFactory is IGaugeFactory {
     address public last_gauge;
@@ -19,14 +19,14 @@ contract GaugeFactory is IGaugeFactory {
     }
 
     function createGauge(address _pool, address _internal_bribe, address _external_bribe, address _ve, bool isPair, address[] memory allowedRewards) external returns (address) {
-        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, false, address(0)));
+        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, address(0)));
         _nativeGauges.push(last_gauge);
         emit GaugeCreated(last_gauge, _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards, false);
         return last_gauge;
     }
-    function createGaugeOnAlgebra(address _rewardToken, address _voter, address _pool, address _internal_bribe, address _external_bribe, address _ve, bool isPair, address[] memory allowedRewards) external returns (address) {
+    function createGaugeOnAlgebra(address _voter, address _pool, address _internal_bribe, address _external_bribe, address _ve, bool isPair, address[] memory allowedRewards) external returns (address) {
         last_feeVault = address( new CLFeesVault(_pool, pairFactory, _voter) );
-        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, true, last_feeVault));
+        last_gauge = address(new Gauge(_pool, _internal_bribe, _external_bribe, _ve, msg.sender, isPair, allowedRewards, last_feeVault));
         _algebraGauges.push(last_gauge);
         emit GaugeCreated(last_gauge, _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards, true);
         return last_gauge;

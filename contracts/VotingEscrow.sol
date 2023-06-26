@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.13;
+pragma solidity =0.8.13;
 
 import {IERC721, IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC20} from "contracts/interfaces/IERC20.sol";
+import "contracts/interfaces/IERC20.sol";
 import {IVeArtProxy} from "contracts/interfaces/IVeArtProxy.sol";
 import {IVotingEscrow} from "contracts/interfaces/IVotingEscrow.sol";
 
@@ -1094,7 +1094,7 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
     function split(uint[] memory amounts, uint _tokenId) external {
 
         // check permission and vote
-        require(attachments[_from] == 0 && !voted[_from], "attached");
+        require(attachments[_tokenId] == 0 && !voted[_tokenId], "attached");
         require(_isApprovedOrOwner(msg.sender, _tokenId));
 
         // save old data and totalWeight
@@ -1427,7 +1427,8 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
         return _delegate(signatory, delegatee);
     }
 
-    function setEmergency(bool _isEmergency) external onlyOwner {
+    function setEmergency(bool _isEmergency) external {
+        require(msg.sender == team, "not team");
         isEmergency = _isEmergency;
     }
 
