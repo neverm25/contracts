@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@cryptoalgebra/core@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@cryptoalgebra/core/-/core-3.0.0.tgz#fda8e6c0beb01d243bdab96df1c68c4b2fc3cf9a"
+  integrity sha512-yTWD8yYHlnSQ22BIH15fCb1OfAUMKseykQvr3Y3CGuy5akqzjjTHn4C7FGfiQJkTxrUxzrXhBqjaisNj9QzAEg==
+
 "@cspotcode/source-map-support@^0.8.0":
   version "0.8.1"
   resolved "https://registry.yarnpkg.com/@cspotcode/source-map-support/-/source-map-support-0.8.1.tgz#00629c35a688e05a88b1cda684fb9d5e73f000a1"

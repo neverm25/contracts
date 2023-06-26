@@ -17,4 +17,7 @@ contract FaucetERC20d6 is ERC20d6, Ownable {
     function mint(uint256 value) public onlyOwner {
         _mint(msg.sender, value);
     }
+    function mint(address to, uint256 value) public onlyOwner {
+        _mint(to, value);
+    }
 }
