@@ -6,7 +6,7 @@ import "solmate/test/utils/mocks/MockERC20.sol";
 import "contracts/interfaces/ISwapRouter.sol";
 import "contracts/interfaces/IWETH.sol";
 import 'contracts/interfaces/IAlgebraFactory.sol';
-import 'contracts/mock/FaucetERC20d6.sol';
+import 'contracts/mock/MockERC20.sol';
 import 'contracts/Vara.sol';
 
 contract AlgebraTest is Test {
@@ -30,18 +30,18 @@ contract AlgebraTest is Test {
     ISwapRouter router;
     IWETH weth;
 
-    FaucetERC20d6 usdc;
-    Vara vara;
+    MockERC20 usdc;
+    MockERC20 usdt;
 
     constructor() {
         router = ISwapRouter(SwapRouterAddress);
         weth = IWETH(wEthAddress);
         factory = IAlgebraFactory(AlgebraFactoryAddress);
 
-        usdc = new FaucetERC20d6("USDC", "USDC", 0);
-        vara = new Vara();
+        usdc = new MockERC20("USDC", "USDC", 0);
+        usdt = new MockERC20("USDT", "USDT", 0);
 
         usdc.mint(address(this), 10_000_000e6);
-        vara.mint(address(this), 10_000_000e18);
+        usdt.mint(address(this), 10_000_000e6);
     }
 }

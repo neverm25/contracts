@@ -9,7 +9,7 @@ import {config as dotenvConfig} from "dotenv";
 import {HardhatUserConfig, task} from "hardhat/config";
 import fs from "fs";
 import allContracts from "./contracts";
-import mainet from "./scripts/constants/mainnet-config";
+//import mainet from "./scripts/constants/mainnet-config";
 
 interface IContract {
     Vara: string;
@@ -494,10 +494,9 @@ const config: HardhatUserConfig = {
     defaultNetwork: "hardhat",
     networks: {
         hardhat: {
-            initialBaseFeePerGas: 0,
             forking: {
-                url: "https://evm.kava.io",
-                blockNumber: 4943723
+                url: "https://evm.testnet.kava.io",
+                blockNumber: 5966580
             }
         },
         mainnet: {
@@ -508,11 +507,6 @@ const config: HardhatUserConfig = {
             url: "https://evm.testnet.kava.io",
             accounts: [process.env.PRIVATE_KEY!]
         },
-        bsc_testnet: {
-            url: `https://bsc-testnet.public.blastapi.io`,
-            accounts: [process.env.PRIVATE_KEY!]
-        },
-
     },
     solidity: {
         version: "0.8.13",
