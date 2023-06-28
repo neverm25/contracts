@@ -5,28 +5,6 @@ const contractsJson = fs.readFileSync("./contracts.json", "utf8");
 const allContracts = JSON.parse(contractsJson);
 import getDeploymentConfig from "./deployment-config";
 
-interface IContract {
-    Vara: string;
-    GaugeFactory: string;
-    BribeFactory: string;
-    PairFactory: string;
-    Router: string;
-    Router2: string;
-    VaraLibrary: string;
-    VeArtProxy: string;
-    VotingEscrow: string;
-    RewardsDistributor: string;
-    Voter: string;
-    WrappedExternalBribeFactory: string;
-    Minter: string;
-    VaraGovernor: string;
-    MerkleClaim: string;
-    EquilibreTvlOracle: string;
-    Equilibre_VE_Api: string;
-}
-
-
-
 function fromWei(value: string, decimals: number = 18): string {
     return ethers.utils.formatUnits(value, decimals);
 }
@@ -46,6 +24,104 @@ async function loadCfg() {
         contracts[key] = config[key];
     return contracts;
 }
+
+// algebra create pool and add liquidity:
+const priceToSqrtPrice = (price: number, token0Decimals: number, token1Decimals: number) => {
+    const decimalAdjustment = 10 ** (token0Decimals - token1Decimals);
+    const mathPrice = price / decimalAdjustment;
+    let sqrtPriceX96 = Math.floor(Math.sqrt(mathPrice) * 2 ** 96);
+    return BigInt(sqrtPriceX96);
+};
+
+async function checkIfContractExists(address: string) {
+    if( ! address )
+        throw new Error(`address is null`);
+    const code = await hre.ethers.provider.getCode(address);
+    if( code === "0x" ) {
+        const network = await hre.ethers.provider.getNetwork();
+        const chainId = network.chainId;
+        throw new Error(`${address} contract not found at chanId ${chainId}.`);
+    }
+}
+
+task("algebra-create-pool", "create pool and add liquidity")
+    .setAction(async () => {
+        let tx;
+        const cfg = await loadCfg();
+        const nftAddress = cfg.Algebra_NonfungiblePositionManagerAddress;
+        const nftFactory = cfg.Algebra_FactoryAddress;
+        // attach USDC
+        const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
+        const usdc = MockERC20.attach(cfg.USDC);
+        const usdt = MockERC20.attach(cfg.USDT);
+        const wbtc = MockERC20.attach(cfg.WBTC);
+
+        await checkIfContractExists(cfg.USDC)
+        await checkIfContractExists(cfg.USDT)
+        await checkIfContractExists(cfg.WBTC)
+        await checkIfContractExists(nftAddress)
+        await checkIfContractExists(nftFactory)
+
+
+        const nft = await ethers.getContractAt("INonfungiblePositionManager", nftAddress);
+        const factory = await ethers.getContractAt("IAlgebraFactory", nftFactory);
+
+        const deployer = await ethers.getSigner(0);
+
+        const usdcDecimals = await usdc.decimals();
+        const usdtDecimals = await usdt.decimals();
+        const wbtcDecimals = await wbtc.decimals();
+
+        const usdcBalance = await usdc.balanceOf(deployer.address);
+        const usdtBalance = await usdt.balanceOf(deployer.address);
+        const wbtcBalance = await wbtc.balanceOf(deployer.address);
+
+        const usdcUsdtPrice = priceToSqrtPrice(1, usdcDecimals, usdtDecimals);
+
+        const poolAddress = await factory.poolByPair(usdc.address, usdt.address);
+
+        if( poolAddress === "0x0000000000000000000000000000000000000000" ) {
+            /*
+            console.log(`approvals:`);
+            tx = await usdc.approve(nftAddress, usdcBalance);
+            tx.wait();
+            console.log(`- approvals: usdc approved`);
+            tx = await usdt.approve(nftAddress, usdcBalance);
+            tx.wait();
+            console.log(`- approvals: usdt approved`);
+            tx = await wbtc.approve(nftAddress, wbtcBalance);
+            tx.wait();
+            console.log(`- approvals: wbtc approved`);
+            */
+
+            console.log(`- createAndInitializePoolIfNecessary...`);
+            tx = await nft.createAndInitializePoolIfNecessary(
+                usdt.address,
+                usdc.address,
+                usdcUsdtPrice
+            );
+            tx.wait();
+            console.log(`  done.`);
+        }else{
+            console.log(`- pool already : ${poolAddress}`);
+        }
+        /*
+
+await nft.mint({
+    token0: tokens[0].address,
+    token1: tokens[1].address,
+    tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
+    tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
+    recipient: other.address,
+    amount0Desired: 15,
+    amount1Desired: 15,
+    amount0Min: 0,
+    amount1Min: 0,
+    deadline: 10,
+})
+
+ */
+    });
 
 task("route-quote", "getAmountOut")
     .addParam("from", "from asset")

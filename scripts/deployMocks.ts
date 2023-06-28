@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { MAINNET_CHAIN_ID, TESTNET_CHAIN_ID } = require('../deployment-config');
 async function deploy(name:string, symbol:string, decimals:string, mintAmountInDecimals:string) {
     // set contrat file full path:
     const contractsFile = __dirname + "/../contracts.json";
@@ -35,7 +36,7 @@ async function deploy(name:string, symbol:string, decimals:string, mintAmountInD
         await tx.wait();
     }
     try {
-        if (chainId === 2222 || chainId === 2221) {
+        if (chainId === MAINNET_CHAIN_ID || chainId === TESTNET_CHAIN_ID) {
             console.log(`verify ${symbol} on network ${chainId} address: ${main.address}`);
             await main.deployTransaction.wait(5);
             await hre.run("verify:verify",
@@ -52,7 +53,7 @@ async function deploy(name:string, symbol:string, decimals:string, mintAmountInD
 }
 async function main() {
     const network = await hre.ethers.provider.getNetwork();
-    if (network.chainId === 2222 ) {
+    if (network.chainId === MAINNET_CHAIN_ID ) {
         new Error("mainnet not allowed");
         return;
     }
