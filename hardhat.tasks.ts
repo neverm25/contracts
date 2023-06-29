@@ -43,6 +43,21 @@ async function checkIfContractExists(address: string) {
         throw new Error(`${address} contract not found at chanId ${chainId}.`);
     }
 }
+async function approveIfNotApproved(token: string, spender: string, amount: string) {
+    const cfg = await loadCfg();
+    const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
+    const tokenContract = MockERC20.attach(token);
+    const deployer = await hre.ethers.getSigner(0);
+    const allowance = await tokenContract.allowance(deployer.address, spender);
+    if( allowance.lt(amount) ) {
+        console.log(`approve ${token} to ${spender}...`);
+        const tx = await tokenContract.approve(spender, amount);
+        tx.wait();
+        console.log(`- approvals: ${token} approved`);
+    }
+}
+ const getMinTick = (tickSpacing: number) => Math.ceil(-887272 / tickSpacing) * tickSpacing;
+ const getMaxTick = (tickSpacing: number) => Math.floor(887272 / tickSpacing) * tickSpacing;
 
 task("algebra-create-pool", "create pool and add liquidity")
     .setAction(async () => {
@@ -50,7 +65,7 @@ task("algebra-create-pool", "create pool and add liquidity")
         const cfg = await loadCfg();
         const nftAddress = cfg.Algebra_NonfungiblePositionManagerAddress;
         const nftFactory = cfg.Algebra_FactoryAddress;
-        // attach USDC
+
         const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
         const usdc = MockERC20.attach(cfg.USDC);
         const usdt = MockERC20.attach(cfg.USDT);
@@ -63,10 +78,10 @@ task("algebra-create-pool", "create pool and add liquidity")
         await checkIfContractExists(nftFactory)
 
 
-        const nft = await ethers.getContractAt("INonfungiblePositionManager", nftAddress);
-        const factory = await ethers.getContractAt("IAlgebraFactory", nftFactory);
+        const nft = await hre.ethers.getContractAt("INonfungiblePositionManager", nftAddress);
+        const factory = await hre.ethers.getContractAt("IAlgebraFactory", nftFactory);
 
-        const deployer = await ethers.getSigner(0);
+        const deployer = await hre.ethers.getSigner(0);
 
         const usdcDecimals = await usdc.decimals();
         const usdtDecimals = await usdt.decimals();
@@ -80,47 +95,44 @@ task("algebra-create-pool", "create pool and add liquidity")
 
         const poolAddress = await factory.poolByPair(usdc.address, usdt.address);
 
-        if( poolAddress === "0x0000000000000000000000000000000000000000" ) {
-            /*
-            console.log(`approvals:`);
-            tx = await usdc.approve(nftAddress, usdcBalance);
-            tx.wait();
-            console.log(`- approvals: usdc approved`);
-            tx = await usdt.approve(nftAddress, usdcBalance);
-            tx.wait();
-            console.log(`- approvals: usdt approved`);
-            tx = await wbtc.approve(nftAddress, wbtcBalance);
-            tx.wait();
-            console.log(`- approvals: wbtc approved`);
-            */
+        await approveIfNotApproved(cfg.USDC, nftAddress, usdcBalance);
+        await approveIfNotApproved(cfg.USDT, nftAddress, usdtBalance);
+        await approveIfNotApproved(cfg.WBTC, nftAddress, wbtcBalance);
 
+        if( poolAddress === "0x0000000000000000000000000000000000000000" ) {
             console.log(`- createAndInitializePoolIfNecessary...`);
-            tx = await nft.createAndInitializePoolIfNecessary(
-                usdt.address,
-                usdc.address,
-                usdcUsdtPrice
-            );
+            tx = await nft.createAndInitializePoolIfNecessary(usdt.address, usdc.address, usdcUsdtPrice);
             tx.wait();
             console.log(`  done.`);
         }else{
-            console.log(`- pool already : ${poolAddress}`);
+            console.log(`- pool already : ${poolAddress} exists.`);
         }
-        /*
 
-await nft.mint({
-    token0: tokens[0].address,
-    token1: tokens[1].address,
-    tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
-    tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
-    recipient: other.address,
-    amount0Desired: 15,
-    amount1Desired: 15,
-    amount0Min: 0,
-    amount1Min: 0,
-    deadline: 10,
-})
+        enum FeeAmount {
+            LOW = 500,
+            MEDIUM = 500,
+            HIGH = 500,
+        }
 
- */
+        const TICK_SPACINGS: { [amount in FeeAmount]: number } = {
+            [FeeAmount.LOW]: 60,
+            [FeeAmount.MEDIUM]: 60,
+            [FeeAmount.HIGH]: 60,
+        }
+
+        tx = await nft.mint({
+            token0: usdt.address,
+            token1: usdc.address,
+            tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
+            tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
+            recipient: deployer.address,
+            amount0Desired: usdcBalance,
+            amount1Desired: usdtBalance,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: 999999999999,
+        });
+        tx.wait();
     });
 
 task("route-quote", "getAmountOut")

@@ -14,7 +14,7 @@ const config: HardhatUserConfig = {
         hardhat: {
             forking: {
                 url: "https://evm.testnet.kava.io",
-                blockNumber: 5966580
+                blockNumber: 6001000
             }
         },
         mainnet: {
