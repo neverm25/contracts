@@ -64,6 +64,7 @@ contract Vara is IVara {
     }
 
     function _transfer(address _from, address _to, uint _value) internal returns (bool) {
+        require(balanceOf[_from] >= _value,"Insufficient balance");
         balanceOf[_from] -= _value;
         unchecked {
             balanceOf[_to] += _value;
@@ -79,6 +80,7 @@ contract Vara is IVara {
     function transferFrom(address _from, address _to, uint _value) external returns (bool) {
         uint allowed_from = allowance[_from][msg.sender];
         if (allowed_from != type(uint).max) {
+            require(allowed_from >= _value,"Insufficient allowance");
             allowance[_from][msg.sender] -= _value;
         }
         return _transfer(_from, _to, _value);

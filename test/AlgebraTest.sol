@@ -137,7 +137,7 @@ contract AlgebraTest is Test, IERC721Receiver {
     }
 
     function onERC721Received(address, address, uint256, bytes calldata)
-    external override returns (bytes4)
+    external pure override returns (bytes4)
     {
         return this.onERC721Received.selector;
     }
