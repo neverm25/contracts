@@ -2,6 +2,7 @@
 pragma solidity =0.8.13;
 
 import 'contracts/interfaces/IPairFactory.sol';
+import 'contracts/interfaces/IAlgebraFactory.sol';
 import 'contracts/Pair.sol';
 
 contract PairFactory is IPairFactory {
@@ -24,7 +25,10 @@ contract PairFactory is IPairFactory {
     address public dibs;                // referral fee handler
     address public stakingNftFeeHandler;   // staking fee handler
     bool public activeReferral;
+
     mapping(address => mapping(address => mapping(bool => address))) public getPair;
+    /// @dev allPairs is a list of all pairs created by the factory.
+    mapping(address => mapping(address => address)) public algebraGetPair;
     address[] public allPairs;
     mapping(address => bool) public isPair; // simplified check if its a pair, given that `stable` flag might not be available in peripherals
 
@@ -33,6 +37,8 @@ contract PairFactory is IPairFactory {
     bool internal _temp;
 
     event PairCreated(address indexed token0, address indexed token1, bool stable, address pair, uint);
+    event AlgebraPairCreated(address indexed token0, address indexed token1, address pair, uint);
+
     event ActiveReferralSet(bool _activeReferral);
     event StakingNFTFeeSet(uint256 _stakingNFTFee);
     event GammaFeeRecipientSet(address _gammaFeeRecipient);
@@ -46,7 +52,18 @@ contract PairFactory is IPairFactory {
     event FeeManagerSet(address _feeManager);
     event GammaShareSet(uint256 _gammaShare);
 
-    constructor() {
+    /// @dev AlgebraFactory is set in constructor, and cannot be changed.
+    IAlgebraFactory public immutable algebraFactory;
+
+    /// @dev if set all pools created will be on AlgebraFactory.
+    bool public immutable isAlgebraFactorySet;
+
+    constructor( address _algebraFactory ) {
+
+        /// @dev if set all pools created will be on AlgebraFactory.
+        isAlgebraFactorySet = _algebraFactory != address(0);
+        algebraFactory = IAlgebraFactory(_algebraFactory);
+
         pauser = msg.sender;
         isPaused = false;
         feeManager = msg.sender;
@@ -56,10 +73,6 @@ contract PairFactory is IPairFactory {
         stakingNFTFee = 3000; // 30% of stable/volatileFee
         referralFee = 1200; // 12%
 
-    }
-
-    function allPairsLength() external view returns (uint) {
-        return allPairs.length;
     }
 
     function setPauser(address _pauser) external {
@@ -92,6 +105,7 @@ contract PairFactory is IPairFactory {
     }
 
     function setFee(bool _stable, uint256 _fee) external {
+        // TODO: add support to set fee on Algebra backend.
         require(msg.sender == feeManager, 'not fee manager');
         require(_fee <= MAX_FEE, 'fee too high');
         require(_fee != 0, 'fee must be nonzero');
@@ -105,6 +119,7 @@ contract PairFactory is IPairFactory {
     }
 
     function getFee(bool _stable) public view returns(uint256) {
+        // TODO: if Algebra mode is on, get fee from Algebra backend?
         return _stable ? stableFee : volatileFee;
     }
 
@@ -121,16 +136,26 @@ contract PairFactory is IPairFactory {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
         require(getPair[token0][token1][stable] == address(0), 'PE'); // Pair: PAIR_EXISTS - single check is sufficient
-        bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters
         (_temp0, _temp1, _temp) = (token0, token1, stable);
-        pair = address(new Pair{salt:salt}());
+        if( isAlgebraFactorySet ){
+            pair = algebraFactory.createPool(tokenA, tokenB);
+        }else{
+            bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters
+            pair = address(new Pair{salt:salt}());
+        }
+        /// @dev simple version of getPair, without stable flag
+        algebraGetPair[token0][token1] = pair;
+
+        /// @dev full getPair, with stable flag, to compatibility with other contracts
         getPair[token0][token1][stable] = pair;
         getPair[token1][token0][stable] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
         isPair[pair] = true;
         emit PairCreated(token0, token1, stable, pair, allPairs.length);
     }
-
+    function allPairsLength() external view returns (uint) {
+        return allPairs.length;
+    }
     function setStakingFeeHandler(address _stakingNftFeeHandler) external {
         require( _stakingNftFeeHandler != address(0), 'zero address');
         require(msg.sender == feeManager, 'not fee manager');

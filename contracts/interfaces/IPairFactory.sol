@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.13;
-
+import {IAlgebraFactory} from 'contracts/interfaces/IAlgebraFactory.sol';
 interface IPairFactory {
     function PRECISION() external view returns (uint);
     function allPairsLength() external view returns (uint);
@@ -16,4 +16,8 @@ interface IPairFactory {
     function gammaFeeRecipient() external view returns(address);
     function activeReferral() external view returns(bool);
     function gammaShare() external view returns(uint);
+
+    function isAlgebraFactorySet() external view returns(bool);
+    function algebraGetPair(address tokenA, address tokenB) external view returns (address);
+    function algebraFactory() external view returns (IAlgebraFactory);
 }

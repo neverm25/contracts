@@ -49,9 +49,9 @@ contract Emission is Test {
     Gauge gauge_eth_vara;
     function setUp() public {
         vara = new Vara();
-        gaugeFactory = new GaugeFactory();
+        gaugeFactory = new GaugeFactory(address(factory));
         bribeFactory = new BribeFactory();
-        pairFactory = new PairFactory();
+        pairFactory = new PairFactory(address(0));
         WETH = new TestWETH();
         DAI = new MockERC20("DAI", "DAI", 18);
         router = new Router2(address(pairFactory), address(WETH));

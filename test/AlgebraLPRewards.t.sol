@@ -2,7 +2,7 @@ pragma solidity =0.8.13;
 
 import "./BaseTest.sol";
 
-contract LPRewardsTest is BaseTest {
+contract AlgebraLPRewardsTest is BaseTest {
     VotingEscrow escrow;
     GaugeFactory gaugeFactory;
     BribeFactory bribeFactory;
@@ -10,6 +10,7 @@ contract LPRewardsTest is BaseTest {
     Gauge gauge;
 
     function setUp() public {
+        useAlgebra(true);
         deployOwners();
         deployCoins();
         mintStables();

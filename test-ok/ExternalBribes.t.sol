@@ -31,7 +31,7 @@ contract ExternalBribesTest is BaseTest {
         deployPairWithOwner(address(owner));
 
         // deployVoter()
-        gaugeFactory = new GaugeFactory();
+        gaugeFactory = new GaugeFactory(address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
 

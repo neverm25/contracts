@@ -23,9 +23,9 @@ contract MinterTest is BaseTest {
 
         VeArtProxy artProxy = new VeArtProxy();
         escrow = new VotingEscrow(address(VARA), address(artProxy));
-        factory = new PairFactory();
+        factory = new PairFactory(address(0));
         router = new Router(address(factory), address(owner));
-        gaugeFactory = new GaugeFactory();
+        gaugeFactory = new GaugeFactory(address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
 

@@ -16,6 +16,7 @@ import 'contracts/interfaces/IVotingEscrow.sol';
 // algebra integration:
 import './interfaces/IAlgebraFactory.sol';
 import './interfaces/IHypervisor.sol';
+import './interfaces/IPairInfo.sol';
 
 contract Voter is IVoter {
 
@@ -58,9 +59,8 @@ contract Voter is IVoter {
     event Detach(address indexed owner, address indexed gauge, uint256 tokenId);
     event Whitelisted(address indexed whitelister, address indexed token);
 
-    // if true, switch to algebra pools factory:
-    bool public useAlgebraFactory = false;
-
+    bool public isAlgebra;
+    IPairFactory pairFactory;
     constructor(address __ve, address _factory, address  _gauges, address _bribes) {
         _ve = __ve;
         factory = _factory;
@@ -70,6 +70,8 @@ contract Voter is IVoter {
         minter = msg.sender;
         governor = msg.sender;
         emergencyCouncil = msg.sender;
+        isAlgebra = IPairFactory(factory).isAlgebraFactorySet();
+        pairFactory = IPairFactory(factory);
     }
 
     // simple re-entrancy check
@@ -210,6 +212,7 @@ contract Voter is IVoter {
     }
 
     function createGauge(address _pool) external returns (address) {
+        require(_pool != address(0x0), "!pool");
         require(gauges[_pool] == address(0x0), "exists");
         address[] memory allowedRewards = new address[](3);
         address[] memory internalRewards = new address[](2);
@@ -218,17 +221,22 @@ contract Voter is IVoter {
         address tokenA;
         address tokenB;
 
-        if( useAlgebraFactory ) {
-            address _pool_factory = IAlgebraFactory(factory).poolByPair(tokenA, tokenB);
+        if( isAlgebra ) {
+            address _pool_factory = pairFactory.algebraFactory().poolByPair(tokenA, tokenB);
             address _pool_hyper = IHypervisor(_pool).pool();
             isPair = _pool_hyper == _pool_factory;
             require(isPair, 'wrong tokens');
         } else {
-            isPair = IPairFactory(factory).isPair(_pool);
+            isPair = pairFactory.isPair(_pool);
         }
 
         if (isPair) {
-            (tokenA, tokenB) = IPair(_pool).tokens();
+            if( isAlgebra ){
+                tokenA = IPairInfo(_pool).token0();
+                tokenB = IPairInfo(_pool).token1();
+            }else{
+                (tokenA, tokenB) = IPair(_pool).tokens();
+            }
             allowedRewards[0] = tokenA;
             allowedRewards[1] = tokenB;
             internalRewards[0] = tokenA;
@@ -247,7 +255,7 @@ contract Voter is IVoter {
         address _internal_bribe = IBribeFactory(bribeFactory).createInternalBribe(internalRewards);
         address _external_bribe = IBribeFactory(bribeFactory).createExternalBribe(allowedRewards);
 
-        if( useAlgebraFactory ) {
+        if( isAlgebra ) {
             _gauge = IGaugeFactory(gaugeFactory).createGaugeOnAlgebra(address(this), _pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
         }else{
             _gauge = IGaugeFactory(gaugeFactory).createGauge(_pool, _internal_bribe, _external_bribe, _ve, isPair, allowedRewards);
@@ -425,12 +433,6 @@ contract Voter is IVoter {
         (bool success, bytes memory data) =
         token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
-    }
-
-    /// @notice switcher to use algebra factory pools:
-    function setUseAlgebraFactory(bool _useAlgebraFactory) external {
-        require( msg.sender != governor, "not governor");
-        useAlgebraFactory = _useAlgebraFactory;
     }
 
     function epochTimestamp() public view returns(uint256) {

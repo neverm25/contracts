@@ -1,9 +1,11 @@
-// 1:1 with Hardhat test
 pragma solidity =0.8.13;
 
-import './BaseTest.sol';
+import './AlgebraTest.sol';
 
-contract PairTest is BaseTest {
+
+contract AlgebraPairTest is AlgebraTest {
+
+    constructor() AlgebraTest(true) {}
     VotingEscrow escrow;
     GaugeFactory gaugeFactory;
     BribeFactory bribeFactory;
@@ -885,4 +887,6 @@ contract PairTest is BaseTest {
         gauge.getReward(address(owner), rewards);
         gauge.withdraw(gauge.balanceOf(address(owner)));
     }
+
+
 }

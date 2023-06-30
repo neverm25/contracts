@@ -85,7 +85,7 @@ contract WashTradeTest is BaseTest {
     function deployVoter() public {
         routerAddLiquidity();
 
-        gaugeFactory = new GaugeFactory();
+        gaugeFactory = new GaugeFactory(address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
         address[] memory tokens = new address[](4);

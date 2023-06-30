@@ -14,7 +14,7 @@ contract TaxTokenTest is BaseTest {
     uint TOKEN_100 = 100 * 1e18;
     uint liquidityAdded;
     function setUp() public {
-        factory = new PairFactory();
+        factory = new PairFactory(address(0));
         WETH = new TestWETH();
         router2 = new Router2(address(factory), address(WETH));
         taxToken = new TaxToken(address(this));

@@ -12,7 +12,7 @@ contract EquilibreTvlOracleTest is BaseTest {
     Pair poolVara;
     function setUp() public {
         deployCoins();
-        factory = new PairFactory();
+        factory = new PairFactory(address(0));
         router2 = new Router2(address(factory), address(WETH));
 
         // weth/usdc
