@@ -257,7 +257,11 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     }
 
     function deployPairFactoryAndRouter() public {
-        factory = new PairFactory(address(0));
+        if( isAlgebra ){
+            console2.log("Attention: Algebra is activated!");
+            require(algebraFactoryAddress != address(0), "algebraFactoryAddress is zero");
+        }
+        factory = new PairFactory(algebraFactoryAddress);
         assertEq(factory.allPairsLength(), 0);
         factory.setFee(true, 1); // set fee back to 0.01% for old tests
         factory.setFee(false, 1);
@@ -265,6 +269,7 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         router2 = new Router2(address(factory), address(WETH));
         assertEq(router.factory(), address(factory));
         lib = new VaraLibrary(address(router));
+
     }
 
     function deployPairWithOwner(address _owner) public {

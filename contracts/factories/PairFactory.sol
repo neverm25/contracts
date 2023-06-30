@@ -132,6 +132,7 @@ contract PairFactory is IPairFactory {
     }
 
     function createPair(address tokenA, address tokenB, bool stable) external returns (address pair) {
+        require(!isPaused, 'paused');
         require(tokenA != tokenB, 'IA'); // Pair: IDENTICAL_ADDRESSES
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
