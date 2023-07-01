@@ -30,10 +30,10 @@ contract UniversalRouter is IUniswapV2Router{
     }
     function swapExactTokensForTokens(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMinimum, uint256 deadline) public returns (uint256[] memory amounts){
         IERC20 token = IERC20(tokenIn);
-        require( token.balanceOf(address(this)) >= amountIn,
+        require( token.balanceOf(msg.sender) >= amountIn,
             string(abi.encodePacked("swapExactTokensForTokens: insufficient balance for: ", token.symbol())) );
 
-        require( token.allowance(address(this), routerAddress) >= amountIn,
+        require( token.allowance(msg.sender, address(this)) >= amountIn,
             string(abi.encodePacked("swapExactTokensForTokens: insufficient allowance for: ", token.symbol()))  );
 
         if( isAlgebraMode ){
@@ -50,6 +50,7 @@ contract UniversalRouter is IUniswapV2Router{
         uint256 deadline
     ) internal returns (uint256[] memory amounts){
         uint256[] memory _amounts = new uint256[](2);
+        require(false, "//TODO: swapExactTokensForTokensAlgebra");
         //return algebraRouter.exactInputSingle(ISwapRouter.ExactInputSingleParams(tokenIn, tokenOut, address(this), deadline, amountIn, amountOutMinimum, 0));
         return _amounts;
     }
@@ -80,15 +81,15 @@ contract UniversalRouter is IUniswapV2Router{
         IERC20 _tokenA = IERC20(tokenA);
         IERC20 _tokenB = IERC20(tokenB);
 
-        require( _tokenA.balanceOf(address(this)) >= amountADesired,
-            string(abi.encodePacked("insufficient balance for tokenA: ", _tokenA.symbol())) );
-        require( _tokenB.balanceOf(address(this)) >= amountBDesired,
-            string(abi.encodePacked("insufficient balance for tokenB: ", _tokenA.symbol())) );
+        require( _tokenA.balanceOf(msg.sender) >= amountADesired,
+            string(abi.encodePacked("addLiquidity: insufficient balance for tokenA: ", _tokenA.symbol())) );
+        require( _tokenB.balanceOf(msg.sender) >= amountBDesired,
+            string(abi.encodePacked("addLiquidity: insufficient balance for tokenB: ", _tokenA.symbol())) );
 
-        require( _tokenA.allowance(address(this), routerAddress) >= amountADesired,
-            string(abi.encodePacked("insufficient allowance for tokenA: ", _tokenA.symbol()))  );
-        require( _tokenB.allowance(address(this), routerAddress) >= amountBDesired,
-            string(abi.encodePacked("insufficient allowance for tokenB: ", _tokenB.symbol()))  );
+        require( _tokenA.allowance(msg.sender, address(this)) >= amountADesired,
+            string(abi.encodePacked("addLiquidity: insufficient allowance for tokenA: ", _tokenA.symbol()))  );
+        require( _tokenB.allowance(msg.sender, address(this)) >= amountBDesired,
+            string(abi.encodePacked("addLiquidity: insufficient allowance for tokenB: ", _tokenB.symbol()))  );
 
         if( isAlgebraMode ){
             return addLiquidityAlgebra(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
@@ -106,6 +107,7 @@ contract UniversalRouter is IUniswapV2Router{
         address to,
         uint256 deadline
     ) internal returns (uint256 amountA, uint256 amountB, uint256 liquidity){
+        require(false, "//TODO: addLiquidityAlgebra");
         return (0,0,0);
     }
     function addLiquidityUniswap(
@@ -118,9 +120,56 @@ contract UniversalRouter is IUniswapV2Router{
         address to,
         uint256 deadline
     ) internal returns (uint256 amountA, uint256 amountB, uint256 liquidity){
+        require(false, "//TODO: addLiquidityUniswap");
         return (0,0,0);
     }
+    function addLiquidityETH(
+        address token,
+        bool stable,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMinimum,
+        uint256 amountETHMinimum,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
+        IERC20 _token = IERC20(token);
+        require( _token.balanceOf(msg.sender) >= amountTokenDesired,
+            string(abi.encodePacked("addLiquidityETH: insufficient balance for token: ", _token.symbol())) );
 
+        require( _token.allowance(msg.sender, address(this)) >= amountTokenDesired,
+            string(abi.encodePacked("addLiquidityETH: insufficient allowance for token: ", _token.symbol()))  );
+
+        if( isAlgebraMode ){
+            return addLiquidityETHAlgebra(token, stable, amountTokenDesired, amountTokenMinimum, amountETHMinimum, to, deadline);
+        }else{
+            return addLiquidityETHUniswap(token, stable, amountTokenDesired, amountTokenMinimum, amountETHMinimum, to, deadline);
+        }
+    }
+
+    function addLiquidityETHAlgebra(
+        address token,
+        bool stable,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMinimum,
+        uint256 amountETHMinimum,
+        address to,
+        uint256 deadline
+    ) internal returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
+        require(false,"//TODO: needs implementation");
+        return (0,0,0);
+    }
+    function addLiquidityETHUniswap(
+        address token,
+        bool stable,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMinimum,
+        uint256 amountETHMinimum,
+        address to,
+        uint256 deadline
+    ) internal returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
+        require(false,"//TODO: needs implementation");
+        return (0,0,0);
+    }
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         bool stable,
@@ -172,18 +221,7 @@ contract UniversalRouter is IUniswapV2Router{
     ) external{
         require(false, "//TODO: needs implementation");
     }
-    function addLiquidityETH(
-        address token,
-        bool stable,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external payable returns (uint amountToken, uint amountETH, uint liquidity){
-        require(false, "//TODO: needs implementation");
-        return(0,0,0);
-    }
+
     function sortTokens(address tokenA, address tokenB) public pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'Router: IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);

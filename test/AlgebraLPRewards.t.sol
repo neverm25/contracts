@@ -42,6 +42,7 @@ contract AlgebraLPRewardsTest is BaseTest {
     }
 
     function testLPsEarnEqualVaraBasedOnVeVara() public {
+        console2.log("testLPsEarnEqualVaraBasedOnVeVara");
         // owner1 deposits LP
         USDC.approve(address(router), 1e12);
         FRAX.approve(address(router), TOKEN_1M);

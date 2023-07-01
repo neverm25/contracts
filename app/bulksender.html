@@ -113,6 +113,28 @@
 <body onload="main()">
 
 <div class="container">
+
+
+    <div class="jumbotron">
+        <h1>Send same amount of tokens to many wallets...</h1>
+        <hr/>
+        <p>
+            Token address:
+            <input type="number" id="sendSameAmountToMany_Token"/>
+            Value in decimal for each user:
+            <input type="number" id="sendSameAmountToMany_ValueInDecimal"/>
+            <input type="button" value="Send"
+                   onclick="sendSameAmountToMany($('#sendSameAmountToMany_Token').val(), $('#sendSameAmountToMany_ValueInDecimal').val(), $('#sendSameAmountToMany_Addresses').val())" />
+            <br/>
+        </p>
+        <p>
+        <textarea rows="8" cols="100%" id="sendSameAmountToMany_Addresses"
+                  placeholder="0x1,0x2,0x3"></textarea>
+        </p>
+        <hr/>
+        <div id="sendSameAmountToMany_Result"></div>
+    </div>
+
     <div id="result"></div>
     <div class="jumbotron">
         <h1>Send same amount of KAVA to many wallets...</h1>
@@ -156,7 +178,6 @@
 
 
     </div>
-
 
 </div>
 

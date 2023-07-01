@@ -292,6 +292,7 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     }
 
     function deployPairWithOwner(address _owner) public {
+        console2.log("deployPairWithOwner");
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(USDC), address(router), USDC_1);
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(USDC), true, TOKEN_1, USDC_1, 0, 0, address(owner), block.timestamp);
