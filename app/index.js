@@ -30,7 +30,10 @@ function splitAndClean(str){
     let array = []
     for (let i in arr) {
         if (!arr[i]) continue;
-        array.push(arr[i].trimEnd().trimStart());
+        const address = _.trim(arr[i]);
+        if( ! web3.utils.isAddress(address) )
+            continue;
+        array.push( address );
     }
     return array;
 }
