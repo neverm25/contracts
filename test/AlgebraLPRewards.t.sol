@@ -10,7 +10,7 @@ contract AlgebraLPRewardsTest is BaseTest {
     Gauge gauge;
 
     function setUp() public {
-        useAlgebra(true);
+        useAlgebra();
         deployOwners();
         deployCoins();
         mintStables();

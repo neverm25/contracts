@@ -16,6 +16,9 @@ import "contracts/PairFees.sol";
 import "contracts/RewardsDistributor.sol";
 import "contracts/Router.sol";
 import "contracts/Router2.sol";
+import "contracts/UniversalRouter.sol";
+import "contracts/interfaces/ISwapRouter.sol";
+import "contracts/interfaces/IUniswapV2Router.sol";
 import "contracts/Vara.sol";
 import "contracts/VaraLibrary.sol";
 import "contracts/Voter.sol";
@@ -63,8 +66,10 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     MockERC20 LR; // late reward
     TestToken stake; // MockERC20 with claimFees() function that returns (0,0)
     PairFactory factory;
-    Router router;
-    Router2 router2;
+
+    UniversalRouter router;
+    Router2 routerUniswap;
+
     VaraLibrary lib;
     Pair pair;
     Pair pair2;
@@ -125,9 +130,14 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     int24 constant public tickLower = -60;
     int24 constant public tickUpper = 60;
 
-    bool public isAlgebra = false;
-    function useAlgebra(bool useMainnetAddresses) public {
-        isAlgebra = true;
+    constructor(){
+        uint VALID_TESTNET_ID = vm.envUint("VALID_TESTNET_ID");
+        uint VALID_MAINNET_ID = vm.envUint("VALID_MAINNET_ID");
+        uint CHAIN_ID = block.chainid;
+        bool useMainnetAddresses = CHAIN_ID == VALID_MAINNET_ID;
+        require(VALID_TESTNET_ID > 0, "VALID_TESTNET_ID not set in ../.env");
+        require(VALID_MAINNET_ID > 0, "VALID_MAINNET_ID not set in ../.env");
+        require(CHAIN_ID == VALID_TESTNET_ID || CHAIN_ID == VALID_MAINNET_ID, "block.chainid not VALID_TESTNET_ID or VALID_MAINNET_ID");
         if( useMainnetAddresses){
             algebraFactoryAddress = Mainnet_AlgebraFactoryAddress;
             algebraRouterAddress = Mainnet_SwapRouterAddress;
@@ -139,6 +149,12 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
             algebraWethAddress = Testnet_wEthAddress;
             algebraPositionManagerAddress = Testnet_NonfungiblePositionManagerAddress;
         }
+    }
+
+    bool public isAlgebra = false;
+    function useAlgebra() public {
+        isAlgebra = true;
+
         // check if contracts code size:
         if(algebraFactoryAddress.code.length == 0)
             revert("algebraFactoryAddress code size is zero");
@@ -259,14 +275,17 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     function deployPairFactoryAndRouter() public {
         if( isAlgebra ){
             console2.log("Attention: Algebra is activated!");
-            require(algebraFactoryAddress != address(0), "algebraFactoryAddress is zero");
+            require(algebraFactoryAddress != address(0), "useAlgebra(useMainnetAddresses) not set");
         }
+        require( address(router) == address(0), "router already set" );
         factory = new PairFactory(algebraFactoryAddress);
         assertEq(factory.allPairsLength(), 0);
         factory.setFee(true, 1); // set fee back to 0.01% for old tests
         factory.setFee(false, 1);
-        router = new Router(address(factory), address(WETH));
-        router2 = new Router2(address(factory), address(WETH));
+
+        routerUniswap = new Router2(address(factory), address(WETH));
+        router = new UniversalRouter(isAlgebra, address(routerUniswap), algebraRouterAddress);
+
         assertEq(router.factory(), address(factory));
         lib = new VaraLibrary(address(router));
 

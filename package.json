@@ -35,8 +35,8 @@
     "@openzeppelin/merkle-tree": "^1.0.2"
   },
   "scripts": {
-    "test0": "forge test -vv --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
-    "test": "forge test -vvvvv --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
+    "test0": "forge test -vv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
+    "test": "forge test -vvvvv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
     "live": "nodemon --exec yarn test0 -e sol,js,ts"
   }
 }
