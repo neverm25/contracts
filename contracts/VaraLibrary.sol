@@ -45,33 +45,34 @@ contract VaraLibrary {
     }
 
     function getTradeDiff(uint amountIn, address tokenIn, address tokenOut, bool stable) external view returns (uint a, uint b) {
-        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = IPair(router.pairFor(tokenIn, tokenOut, stable)).metadata();
+        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = router.metadata(tokenIn, tokenOut, stable);
         uint sample = tokenIn == t0 ? r0*dec1/r1 : r1*dec0/r0;
         a = _getAmountOut(sample, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / sample;
         b = _getAmountOut(amountIn, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / amountIn;
     }
 
     function getTradeDiff(uint amountIn, address tokenIn, address pair) external view returns (uint a, uint b) {
-        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = IPair(pair).metadata();
+        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = router.metadata(pair);
         uint sample = tokenIn == t0 ? r0*dec1/r1 : r1*dec0/r0;
         a = _getAmountOut(sample, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / sample;
         b = _getAmountOut(amountIn, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / amountIn;
     }
 
     function getSample(address tokenIn, address tokenOut, bool stable) external view returns (uint) {
-        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = IPair(router.pairFor(tokenIn, tokenOut, stable)).metadata();
+        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = router.metadata(tokenIn, tokenOut, stable);
         uint sample = tokenIn == t0 ? r0*dec1/r1 : r1*dec0/r0;
         return _getAmountOut(sample, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / sample;
     }
 
     function getMinimumValue(address tokenIn, address tokenOut, bool stable) external view returns (uint, uint, uint) {
-        (uint dec0, uint dec1, uint r0, uint r1,, address t0,) = IPair(router.pairFor(tokenIn, tokenOut, stable)).metadata();
+        (uint dec0, uint dec1, uint r0, uint r1,, address t0,) = router.metadata(tokenIn, tokenOut, stable);
         uint sample = tokenIn == t0 ? r0*dec1/r1 : r1*dec0/r0;
         return (sample, r0, r1);
     }
 
     function getAmountOut(uint amountIn, address tokenIn, address tokenOut, bool stable) external view returns (uint) {
-        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) = IPair(router.pairFor(tokenIn, tokenOut, stable)).metadata();
+        (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) =
+                                    router.metadata(router.pairFor(tokenIn, tokenOut, stable));
         return _getAmountOut(amountIn, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / amountIn;
     }
 

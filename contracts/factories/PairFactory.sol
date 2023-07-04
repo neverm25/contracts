@@ -26,9 +26,19 @@ contract PairFactory is IPairFactory {
     address public stakingNftFeeHandler;   // staking fee handler
     bool public activeReferral;
 
-    mapping(address => mapping(address => mapping(bool => address))) public getPair;
-    /// @dev allPairs is a list of all pairs created by the factory.
-    mapping(address => mapping(address => address)) public algebraGetPair;
+    mapping(address => mapping(address => mapping(bool => address))) internal _getPair;
+
+
+    // get pair info by pool address, can be used to get pool info when we
+    // have only the pool address:
+    struct PairInfo {
+        address token0;
+        address token1;
+        bool stable;
+        uint createdAt;
+    }
+    mapping(address => PairInfo) private pairInfo;
+
     address[] public allPairs;
     mapping(address => bool) public isPair; // simplified check if its a pair, given that `stable` flag might not be available in peripherals
 
@@ -56,12 +66,12 @@ contract PairFactory is IPairFactory {
     IAlgebraFactory public immutable algebraFactory;
 
     /// @dev if set all pools created will be on AlgebraFactory.
-    bool public immutable isAlgebraFactorySet;
+    bool public immutable isAlgebra;
 
     constructor( address _algebraFactory ) {
 
         /// @dev if set all pools created will be on AlgebraFactory.
-        isAlgebraFactorySet = _algebraFactory != address(0);
+        isAlgebra = _algebraFactory != address(0);
         algebraFactory = IAlgebraFactory(_algebraFactory);
 
         pauser = msg.sender;
@@ -136,22 +146,28 @@ contract PairFactory is IPairFactory {
         require(tokenA != tokenB, 'IA'); // Pair: IDENTICAL_ADDRESSES
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
-        require(getPair[token0][token1][stable] == address(0), 'PE'); // Pair: PAIR_EXISTS - single check is sufficient
+        require(_getPair[token0][token1][stable] == address(0), 'PE'); // Pair: PAIR_EXISTS - single check is sufficient
         (_temp0, _temp1, _temp) = (token0, token1, stable);
-        if( isAlgebraFactorySet ){
+        if( isAlgebra ){
             pair = algebraFactory.createPool(tokenA, tokenB);
         }else{
             bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters
             pair = address(new Pair{salt:salt}());
         }
-        /// @dev simple version of getPair, without stable flag
-        algebraGetPair[token0][token1] = pair;
 
-        /// @dev full getPair, with stable flag, to compatibility with other contracts
-        getPair[token0][token1][stable] = pair;
-        getPair[token1][token0][stable] = pair; // populate mapping in the reverse direction
+        /// @dev full _getPair, with stable flag, to compatibility with other contracts
+        _getPair[token0][token1][stable] = pair;
+        _getPair[token1][token0][stable] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
         isPair[pair] = true;
+
+        pairInfo[pair] = PairInfo({
+            token0: token0,
+            token1: token1,
+            stable: stable,
+            createdAt: block.timestamp
+        });
+
         emit PairCreated(token0, token1, stable, pair, allPairs.length);
     }
     function allPairsLength() external view returns (uint) {
@@ -197,5 +213,25 @@ contract PairFactory is IPairFactory {
         if(_gammaShare > gammaMAX) _gammaShare = gammaMAX;
         emit GammaShareSet(_gammaShare);
         gammaShare = _gammaShare;
+    }
+
+    function pairFor(address tokenA, address tokenB, bool stable) public view returns (address pair) {
+        pair = _getPair[tokenA][tokenB][stable];
+    }
+    function getPair(address tokenA, address tokenB, bool stable) external view returns (address pair) {
+        pair = pairFor(tokenA, tokenB, stable);
+    }
+    function isPairFor(address tokenA, address tokenB, bool stable) public view returns (bool) {
+        return address(0) == pairFor(tokenA, tokenB, stable);
+    }
+    function getPairInfo(address pair) external view returns
+    (address token0, address token1, bool stable, uint createdAt)
+    {
+        require(pair != address(0), "getPairInfo: zero address");
+        PairInfo memory info = pairInfo[pair];
+        token0 = info.token0;
+        token1 = info.token1;
+        stable = info.stable;
+        createdAt = info.createdAt;
     }
 }

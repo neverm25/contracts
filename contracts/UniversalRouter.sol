@@ -1,47 +1,71 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.13;
+
 import "contracts/interfaces/IERC20.sol";
 import "contracts/interfaces/ISwapRouter.sol";
 import "contracts/interfaces/IUniswapV2Router.sol";
-contract UniversalRouter is IUniswapV2Router{
+import "contracts/interfaces/INonfungiblePositionManager.sol";
+import "contracts/interfaces/IAlgebraPool.sol";
+import "contracts/interfaces/IPair.sol";
+import "contracts/interfaces/IPairFactory.sol";
+import "contracts/interfaces/IAlgebraFactory.sol";
+import "contracts/libraries/SqrtPrice.sol";
+import "contracts/libraries/ABDKMath64x64.sol";
+import "forge-std/console2.sol";
+
+contract UniversalRouter is IUniswapV2Router {
     bool public isAlgebraMode;
     IUniswapV2Router uniswapRouter;
     ISwapRouter algebraRouter;
-    address public routerAddress;
-    constructor(bool _isAlgebraMode, address _uniswapRouter, address _algebraRouter){
+    INonfungiblePositionManager algebraPositionManager;
+    IPairFactory pairFactory;
+    IAlgebraFactory algebraFactory;
+    address public routerAddress; //
+    int24 tickLower = - 60;
+    int24 tickUpper = 60;
+
+    constructor(bool _isAlgebraMode, address _uniswapRouter, address _algebraRouter, address _algebraPositionManager){
+        algebraPositionManager = INonfungiblePositionManager(_algebraPositionManager);
         isAlgebraMode = _isAlgebraMode;
         uniswapRouter = IUniswapV2Router(_uniswapRouter);
+        pairFactory = IPairFactory(uniswapRouter.factory());
+        algebraFactory = pairFactory.algebraFactory();
         algebraRouter = ISwapRouter(_algebraRouter);
         routerAddress = _isAlgebraMode ? _algebraRouter : _uniswapRouter;
     }
     function factory() external view returns (address){
         return uniswapRouter.factory();
     }
+
     function weth() external view returns (address){
         return uniswapRouter.weth();
     }
+
     function WETH() external view returns (address){
         return uniswapRouter.weth();
     }
+
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, route[] calldata routes, address to, uint deadline) external returns (uint[] memory amounts) {
         address tokenIn = routes[0].from;
         address tokenOut = routes[0].to;
         return swapExactTokensForTokens(tokenIn, tokenOut, amountIn, amountOutMin, deadline);
     }
+
     function swapExactTokensForTokens(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMinimum, uint256 deadline) public returns (uint256[] memory amounts){
         IERC20 token = IERC20(tokenIn);
-        require( token.balanceOf(msg.sender) >= amountIn,
-            string(abi.encodePacked("swapExactTokensForTokens: insufficient balance for: ", token.symbol())) );
+        require(token.balanceOf(msg.sender) >= amountIn,
+            string(abi.encodePacked("swapExactTokensForTokens: insufficient balance for: ", token.symbol())));
 
-        require( token.allowance(msg.sender, address(this)) >= amountIn,
-            string(abi.encodePacked("swapExactTokensForTokens: insufficient allowance for: ", token.symbol()))  );
+        require(token.allowance(msg.sender, address(this)) >= amountIn,
+            string(abi.encodePacked("swapExactTokensForTokens: insufficient allowance for: ", token.symbol())));
 
-        if( isAlgebraMode ){
+        if (isAlgebraMode) {
             return swapExactTokensForTokensAlgebra(tokenIn, tokenOut, amountIn, amountOutMinimum, deadline);
-        }else{
+        } else {
             return swapExactTokensForTokensUniswap(tokenIn, tokenOut, amountIn, amountOutMinimum, deadline);
         }
     }
+
     function swapExactTokensForTokensAlgebra(
         address tokenIn,
         address tokenOut,
@@ -54,6 +78,7 @@ contract UniversalRouter is IUniswapV2Router{
         //return algebraRouter.exactInputSingle(ISwapRouter.ExactInputSingleParams(tokenIn, tokenOut, address(this), deadline, amountIn, amountOutMinimum, 0));
         return _amounts;
     }
+
     function swapExactTokensForTokensUniswap(
         address tokenIn,
         address tokenOut,
@@ -67,6 +92,7 @@ contract UniversalRouter is IUniswapV2Router{
         uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn, amountOutMinimum, routes, address(this), deadline);
         return _amounts;
     }
+
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -78,25 +104,29 @@ contract UniversalRouter is IUniswapV2Router{
         address to,
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity){
-        IERC20 _tokenA = IERC20(tokenA);
-        IERC20 _tokenB = IERC20(tokenB);
 
-        require( _tokenA.balanceOf(msg.sender) >= amountADesired,
-            string(abi.encodePacked("addLiquidity: insufficient balance for tokenA: ", _tokenA.symbol())) );
-        require( _tokenB.balanceOf(msg.sender) >= amountBDesired,
-            string(abi.encodePacked("addLiquidity: insufficient balance for tokenB: ", _tokenA.symbol())) );
+        require(IERC20(tokenA).balanceOf(msg.sender) >= amountADesired, "addLiquidity: insufficient balance for tokenA.");
+        require(IERC20(tokenB).balanceOf(msg.sender) >= amountBDesired, "addLiquidity: insufficient balance for tokenB.");
 
-        require( _tokenA.allowance(msg.sender, address(this)) >= amountADesired,
-            string(abi.encodePacked("addLiquidity: insufficient allowance for tokenA: ", _tokenA.symbol()))  );
-        require( _tokenB.allowance(msg.sender, address(this)) >= amountBDesired,
-            string(abi.encodePacked("addLiquidity: insufficient allowance for tokenB: ", _tokenB.symbol()))  );
+        require(IERC20(tokenA).allowance(msg.sender, address(this)) >= amountADesired, "addLiquidity: insufficient allowance for tokenA.");
+        require(IERC20(tokenB).allowance(msg.sender, address(this)) >= amountBDesired, "addLiquidity: insufficient allowance for tokenB.");
 
-        if( isAlgebraMode ){
-            return addLiquidityAlgebra(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
-        }else{
-            return addLiquidityUniswap(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
+        IERC20(tokenA).transferFrom(msg.sender, address(this), amountADesired);
+        IERC20(tokenB).transferFrom(msg.sender, address(this), amountBDesired);
+
+        if (isAlgebraMode) {
+            IERC20(tokenA).approve(address(algebraPositionManager), amountADesired);
+            IERC20(tokenB).approve(address(algebraPositionManager), amountBDesired);
+            (uint tokenId, uint128 liquidityU128) = addLiquidityAlgebra(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
+            liquidity = uint(liquidityU128);
+        } else {
+            IERC20(tokenA).approve(address(uniswapRouter), amountADesired);
+            IERC20(tokenB).approve(address(uniswapRouter), amountBDesired);
+            liquidity = addLiquidityUniswap(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
         }
+        return (0, 0, liquidity);
     }
+
     function addLiquidityAlgebra(
         address tokenA,
         address tokenB,
@@ -106,10 +136,44 @@ contract UniversalRouter is IUniswapV2Router{
         uint256 amountBMinimum,
         address to,
         uint256 deadline
-    ) internal returns (uint256 amountA, uint256 amountB, uint256 liquidity){
-        require(false, "//TODO: addLiquidityAlgebra");
-        return (0,0,0);
+    ) internal returns (uint256 tokenId, uint128 liquidity){
+        // sort tokens:
+        (address token0, address token1) = sortTokens(tokenA, tokenB);
+        algebraCratePool(tokenA, tokenB, amountADesired, amountBDesired);
+        INonfungiblePositionManager.MintParams memory params =
+                            INonfungiblePositionManager.MintParams({
+                token0: token0,
+                token1: token1,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amountADesired,
+                amount1Desired: amountBDesired,
+                amount0Min: amountAMinimum,
+                amount1Min: amountBMinimum,
+                recipient: to,
+                deadline: deadline
+            });
+
+        (uint256 _tokenId,uint128 _liquidity, uint256 _amount0, uint256 _amount1) =
+                            algebraPositionManager.mint(params);
+        return (_tokenId, _liquidity);
     }
+
+    function algebraCratePool(
+        address tokenA,
+        address tokenB,
+        uint256 amountA,
+        uint256 amountB) internal returns (address poolAddress)
+    {
+        poolAddress = pairFactory.pairFor(tokenA, tokenB, false);
+        if (poolAddress == address(0)) {
+            poolAddress = pairFactory.createPair(tokenA, tokenB, false);
+            uint160 sqrtPriceX96 = SqrtPrice.getSqrtPrice(amountA, amountB);
+            IAlgebraPool(poolAddress).initialize(sqrtPriceX96);
+        }
+        return poolAddress;
+    }
+
     function addLiquidityUniswap(
         address tokenA,
         address tokenB,
@@ -119,10 +183,12 @@ contract UniversalRouter is IUniswapV2Router{
         uint256 amountBMinimum,
         address to,
         uint256 deadline
-    ) internal returns (uint256 amountA, uint256 amountB, uint256 liquidity){
+    ) internal returns (uint liquidity){
         require(false, "//TODO: addLiquidityUniswap");
-        return (0,0,0);
+        liquidity = 0;
+        return liquidity;
     }
+
     function addLiquidityETH(
         address token,
         bool stable,
@@ -133,15 +199,15 @@ contract UniversalRouter is IUniswapV2Router{
         uint256 deadline
     ) external payable returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
         IERC20 _token = IERC20(token);
-        require( _token.balanceOf(msg.sender) >= amountTokenDesired,
-            string(abi.encodePacked("addLiquidityETH: insufficient balance for token: ", _token.symbol())) );
+        require(_token.balanceOf(msg.sender) >= amountTokenDesired,
+            string(abi.encodePacked("addLiquidityETH: insufficient balance for token: ", _token.symbol())));
 
-        require( _token.allowance(msg.sender, address(this)) >= amountTokenDesired,
-            string(abi.encodePacked("addLiquidityETH: insufficient allowance for token: ", _token.symbol()))  );
+        require(_token.allowance(msg.sender, address(this)) >= amountTokenDesired,
+            string(abi.encodePacked("addLiquidityETH: insufficient allowance for token: ", _token.symbol())));
 
-        if( isAlgebraMode ){
+        if (isAlgebraMode) {
             return addLiquidityETHAlgebra(token, stable, amountTokenDesired, amountTokenMinimum, amountETHMinimum, to, deadline);
-        }else{
+        } else {
             return addLiquidityETHUniswap(token, stable, amountTokenDesired, amountTokenMinimum, amountETHMinimum, to, deadline);
         }
     }
@@ -155,9 +221,10 @@ contract UniversalRouter is IUniswapV2Router{
         address to,
         uint256 deadline
     ) internal returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
-        require(false,"//TODO: needs implementation");
-        return (0,0,0);
+        require(false, "//TODO: needs implementation");
+        return (0, 0, 0);
     }
+
     function addLiquidityETHUniswap(
         address token,
         bool stable,
@@ -167,9 +234,10 @@ contract UniversalRouter is IUniswapV2Router{
         address to,
         uint256 deadline
     ) internal returns (uint256 amountToken, uint256 amountETH, uint256 liquidity){
-        require(false,"//TODO: needs implementation");
-        return (0,0,0);
+        require(false, "//TODO: needs implementation");
+        return (0, 0, 0);
     }
+
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         bool stable,
@@ -180,8 +248,9 @@ contract UniversalRouter is IUniswapV2Router{
         uint deadline
     ) external returns (uint amountToken, uint amountETH){
         require(false, "//TODO: needs implementation");
-        return(0,0);
+        return (0, 0);
     }
+
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
         address token,
         bool stable,
@@ -193,32 +262,35 @@ contract UniversalRouter is IUniswapV2Router{
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external returns (uint amountToken, uint amountETH){
         require(false, "//TODO: needs implementation");
-        return(0,0);
+        return (0, 0);
     }
+
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint amountIn,
         uint amountOutMin,
         route[] calldata routes,
         address to,
         uint deadline
-    ) external{
+    ) external {
         require(false, "//TODO: needs implementation");
     }
+
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint amountOutMin,
         route[] calldata routes,
         address to,
         uint deadline
-    ) external{
+    ) external {
         require(false, "//TODO: needs implementation");
     }
+
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
         uint amountIn,
         uint amountOutMin,
         route[] calldata routes,
         address to,
         uint deadline
-    ) external{
+    ) external {
         require(false, "//TODO: needs implementation");
     }
 
@@ -227,10 +299,33 @@ contract UniversalRouter is IUniswapV2Router{
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'Router: ZERO_ADDRESS');
     }
+
     function pairFor(address tokenA, address tokenB, bool stable) public view returns (address pair) {
-        return uniswapRouter.pairFor(tokenA, tokenB, stable);
+        return pairFactory.pairFor(tokenA, tokenB, stable);
     }
-    function isPair(address pair) external view returns (bool) {
-        return uniswapRouter.isPair(pair);
+
+    function isPair(address pair) public view returns (bool) {
+        return pairFactory.isPair(pair);
     }
+
+    function metadata(address tokenA, address tokenB, bool stable) external view returns
+    (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0, address t1)
+    {
+        return metadata(pairFor(tokenA, tokenB, stable));
+    }
+
+    function metadata(address pool) public view returns
+    (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0, address t1)
+    {
+        require(pool != address(0), "pool is zero address");
+        (t0, t1, st,) = pairFactory.getPairInfo(pool);
+        if (isAlgebraMode) {
+            (dec0, dec1) = (IERC20(t0).decimals(), IERC20(t1).decimals());
+            r0 = IERC20(t0).balanceOf(pool);
+            r1 = IERC20(t1).balanceOf(pool);
+        } else {
+            return IPair(pool).metadata();
+        }
+    }
+
 }

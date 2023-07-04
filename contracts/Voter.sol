@@ -70,7 +70,7 @@ contract Voter is IVoter {
         minter = msg.sender;
         governor = msg.sender;
         emergencyCouncil = msg.sender;
-        isAlgebra = IPairFactory(factory).isAlgebraFactorySet();
+        isAlgebra = IPairFactory(factory).isAlgebra();
         pairFactory = IPairFactory(factory);
     }
 

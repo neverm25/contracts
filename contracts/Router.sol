@@ -420,4 +420,11 @@ contract Router is IRouter {
         token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
+    function metadata(address tokenA, address tokenB, bool stable) external view returns (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0, address t1){
+        return metadata(pairFor(tokenA, tokenB, stable));
+    }
+    function metadata(address pool) public view returns (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0, address t1){
+        return IPair(pool).metadata();
+    }
+
 }
