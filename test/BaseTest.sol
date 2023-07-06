@@ -135,8 +135,6 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         uint VALID_MAINNET_ID = vm.envUint("VALID_MAINNET_ID");
         uint CHAIN_ID = block.chainid;
         bool useMainnetAddresses = CHAIN_ID == VALID_MAINNET_ID;
-        require(VALID_TESTNET_ID > 0, "VALID_TESTNET_ID not set in ../.env");
-        require(VALID_MAINNET_ID > 0, "VALID_MAINNET_ID not set in ../.env");
         require(CHAIN_ID == VALID_TESTNET_ID || CHAIN_ID == VALID_MAINNET_ID, "block.chainid not VALID_TESTNET_ID or VALID_MAINNET_ID");
         if( useMainnetAddresses){
             algebraFactoryAddress = Mainnet_AlgebraFactoryAddress;

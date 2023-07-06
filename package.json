@@ -32,11 +32,12 @@
     "@cryptoalgebra/core": "^3.0.0",
     "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.8.0",
-    "@openzeppelin/merkle-tree": "^1.0.2"
+    "@openzeppelin/merkle-tree": "^1.0.2",
+    "cross-env": "^7.0.3"
   },
   "scripts": {
     "test0": "forge test -vv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
     "test": "forge test -vvvvv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
-    "live": "nodemon --exec yarn test0 -e sol,js,ts"
+    "live": "nodemon -r dotenv/config --exec yarn test0 -e sol,js,ts,json -w .env --ignore artifacts --ignore cache --ignore typechain-types "
   }
 }
