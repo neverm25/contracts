@@ -2,7 +2,7 @@
 pragma solidity =0.8.13;
 import "contracts/libraries/SafeERC20.sol";
 import "contracts/interfaces/IERC20.sol";
-
+//import "forge-std/console2.sol";
 contract BulkSender {
 
     using SafeERC20 for IERC20;
@@ -13,6 +13,45 @@ contract BulkSender {
     error NotEnoughBalance();
     error NotEnoughApproval();
     error FailedToSendValue();
+
+    /**
+     * @dev Use this function to send many amount of ERC20 to a list of users.
+     * @param recipients: the list of users addresses that will receive the token.
+     * @param amount: the amount to be sent to each user.
+     */
+    function sendTokensToMany(IERC20 token, address[] memory recipients, uint[] memory amount) external {
+
+        if( address(token) == address(0) )
+            revert InvalidToken();
+
+        if( recipients.length == 0 || recipients.length != amount.length )
+            revert InvalidRecipients();
+
+        // compute total amount needed:
+        uint amountNeeded = 0;
+        uint totalRecipients = amount.length;
+        for( uint i = 0 ; i < totalRecipients; i++ ){
+            amountNeeded += amount[i];
+        }
+
+        if( amountNeeded > token.balanceOf(msg.sender) )
+            revert NotEnoughBalance();
+
+        if( amountNeeded > token.allowance(msg.sender, address(this) ) )
+            revert NotEnoughApproval();
+
+        uint total = recipients.length;
+        for( uint i = 0 ; i < total; i++ ){
+            address recipient = recipients[i];
+            uint value = amount[i];
+            if( recipient == address(0) )
+                revert InvalidRecipient();
+            if( value == 0 )
+                revert InvalidAmount();
+            token.safeTransferFrom(msg.sender, recipient, value);
+        }
+
+    }
 
     /**
      * @dev Use this function to send specific amount of kava to a list of users.

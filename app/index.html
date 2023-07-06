@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>KAVA BulkSender</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <style>
         body { padding-top: 50px; }
     </style>
 
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/3.0.0-rc.5/web3.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js" integrity="sha512-WFN04846sdKMIP5LKNphMaWzU7YpMyCU245etK3g/2ARYbPK9Ub18eG+ljU96qKRCWh+quCY7yefSmlkQw1ANQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="ERC20_ABI.js"></script>
+    <script src="BulkSender_ABI.js"></script>
     <script src="index.js"></script>
     <script type="module" >
         import * as ethers from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.6.2/ethers.js";
@@ -30,7 +32,7 @@
             <div class="card-header" id="headingOne">
                 <h2 class="mb-0">
                     <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                        Send same amount of tokens to many wallets
+                        Send same number of tokens to many wallets
                     </button>
                 </h2>
             </div>
@@ -76,30 +78,57 @@
             <div class="card-header" id="headingTwo">
                 <h2 class="mb-0">
                     <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                        Send same amount of KAVA to many wallets
+                        Send same number of tokens to many wallets
                     </button>
                 </h2>
             </div>
             <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
                 <div class="card-body">
-                    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+                    <form onsubmit="sendManyAmountToMany_Run(); return false;">
+                        <div class="form-group">
+                            <label for="sendManyAmountToMany_Token">ERC20 token address:</label>
+                            <input type="text" class="form-control" id="sendManyAmountToMany_Token" aria-describedby="sendManyAmountToMany_TokenHelp" placeholder="0x..."
+                                   value="0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73">
+                            <small id="sendManyAmountToMany_TokenHelp" class="form-text text-muted">Please, input a valid ERC20 address in KAVA network.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="sendManyAmountToMany_List">List of addresses:</label>
+                            <textarea class="form-control" id="sendManyAmountToMany_List" rows="3"
+                                      placeholder="0x1,0x2,0x3">
+                                0xFa4384b298084A0ef13F378853DEDbB33A857B31,
+                                0x471F79616569343e8e84a66F342B7B433b958154
+                                0xfA9343C3897324496A05fC75abeD6bAC29f8A40f
+
+                            </textarea>
+                            <small id="sendManyAmountToMany_ListHelp" class="form-text text-muted">Paste addresses, separated by: , or spaces or new lines.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="sendManyAmountToMany_Amount">Amounts to send in decimal:</label>
+                            <textarea class="form-control" id="sendManyAmountToMany_Amount" rows="3"
+                                      placeholder="Example: 100, 10.10, 9.1, 1000">
+                                0.1, 0.2, 0.3
+                            </textarea>
+                            <small id="sendManyAmountToMany_AmountHelp" class="form-text text-muted">
+                                Must be in decimal; we will convert, according to token decimals.
+                            </small>
+                        </div>
+                        <span id="sendManyAmountToMany_SubmitHelp" class="form-text text-muted">(complete all fields to activate send)</span>
+                        <div class="form-group">
+                            <div class="form-row">
+                                <div class="col-2">
+                                    <button id="sendManyAmountToMany_Submit" type="submit" class="btn btn-danger">Bulk send</button>
+                                </div>
+                                <div class="col-1">
+                                    <button onclick="sendManyAmountToMany_Approve()" id="sendManyAmountToMany_ApproveBtn" style="display:none" type="button" class="btn btn-warning">Approve</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
                 </div>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header" id="headingThree">
-                <h2 class="mb-0">
-                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                        Send individual amount of KAVA to many wallets
-                    </button>
-                </h2>
-            </div>
-            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
-                <div class="card-body">
-                    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
-                </div>
-            </div>
-        </div>
+
     </div>
 
 </div>

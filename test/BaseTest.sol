@@ -293,17 +293,22 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     }
 
     function deployPairWithOwner(address _owner) public {
+        console2.log("deployPairWithOwner", _owner);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(USDC), address(router), USDC_1);
+        console2.log("addLiquidity frax/usdc true");
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(USDC), true, TOKEN_1, USDC_1, 0, 0, address(owner), block.timestamp);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(USDC), address(router), USDC_1);
+        console2.log("addLiquidity frax/usdc false");
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(USDC), false, TOKEN_1, USDC_1, 0, 0, address(owner), block.timestamp);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(DAI), address(router), TOKEN_1);
+        console2.log("addLiquidity frax/dai true");
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(DAI), true, TOKEN_1, TOKEN_1, 0, 0, address(owner), block.timestamp);
 
         if( isAlgebra ){
+            // because when creating pools on Algebra it does not duplicate.
             assertEq(factory.allPairsLength(), 2, "algebra: allPairsLength should be 2");
         } else {
             assertEq(factory.allPairsLength(), 3, "solidly: allPairsLength should be 3");

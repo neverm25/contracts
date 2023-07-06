@@ -11,7 +11,7 @@ import "contracts/interfaces/IPairFactory.sol";
 import "contracts/interfaces/IAlgebraFactory.sol";
 import "contracts/libraries/SqrtPrice.sol";
 import "contracts/libraries/ABDKMath64x64.sol";
-import "forge-std/console2.sol";
+//import "forge-std/console2.sol";
 
 contract UniversalRouter is IUniswapV2Router {
     bool public isAlgebraMode;
@@ -117,7 +117,7 @@ contract UniversalRouter is IUniswapV2Router {
         if (isAlgebraMode) {
             IERC20(tokenA).approve(address(algebraPositionManager), amountADesired);
             IERC20(tokenB).approve(address(algebraPositionManager), amountBDesired);
-            (uint tokenId, uint128 liquidityU128) = addLiquidityAlgebra(tokenA, tokenB, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
+            (uint tokenId, uint128 liquidityU128) = addLiquidityAlgebra(tokenA, tokenB, stable, amountADesired, amountBDesired, amountAMinimum, amountBMinimum, to, deadline);
             liquidity = uint(liquidityU128);
         } else {
             IERC20(tokenA).approve(address(uniswapRouter), amountADesired);
@@ -130,6 +130,7 @@ contract UniversalRouter is IUniswapV2Router {
     function addLiquidityAlgebra(
         address tokenA,
         address tokenB,
+        bool stable,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMinimum,
@@ -138,8 +139,11 @@ contract UniversalRouter is IUniswapV2Router {
         uint256 deadline
     ) internal returns (uint256 tokenId, uint128 liquidity){
         // sort tokens:
+
         (address token0, address token1) = sortTokens(tokenA, tokenB);
-        algebraCratePool(tokenA, tokenB, amountADesired, amountBDesired);
+
+        algebraCratePool(tokenA, tokenB, stable, amountADesired, amountBDesired);
+
         INonfungiblePositionManager.MintParams memory params =
                             INonfungiblePositionManager.MintParams({
                 token0: token0,
@@ -162,12 +166,13 @@ contract UniversalRouter is IUniswapV2Router {
     function algebraCratePool(
         address tokenA,
         address tokenB,
+        bool stable,
         uint256 amountA,
         uint256 amountB) internal returns (address poolAddress)
     {
-        poolAddress = pairFactory.pairFor(tokenA, tokenB, false);
+        poolAddress = pairFactory.pairFor(tokenA, tokenB, stable);
         if (poolAddress == address(0)) {
-            poolAddress = pairFactory.createPair(tokenA, tokenB, false);
+            poolAddress = pairFactory.createPair(tokenA, tokenB, stable);
             uint160 sqrtPriceX96 = SqrtPrice.getSqrtPrice(amountA, amountB);
             IAlgebraPool(poolAddress).initialize(sqrtPriceX96);
         }

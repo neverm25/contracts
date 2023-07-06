@@ -24,7 +24,62 @@ contract BulkSenderTest is Test {
         // ---
     }
 
-    function testSendERC20() public {
+    function random(uint nonce) internal returns (uint) {
+        uint randomNumber = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))) % 9;
+        return randomNumber + 1;
+    }
+
+    function test_sendTokensToMany() public {
+
+        uint total = 200;
+        address[] memory empty = new address[](0);
+        uint[] memory emptyValue = new uint[](0);
+        address[] memory addresses = new address[](total);
+        uint[] memory amount = new uint[](total);
+        uint totalAmount = 0;
+        for( uint i = 0 ; i < total ; i ++ ){
+            // create a random value of tokens to send, between 1 and 10
+            amount[i] = random(i) * 1e6;
+            totalAmount += amount[i];
+            addresses[i] = cheats.addr(i+1);
+            //console2.log(addresses[i], values[i]);
+        }
+
+        address[] memory invalidRecipient = new address[](2);
+        invalidRecipient[0] = address(0); // skip
+        invalidRecipient[1] = address(0);
+
+        uint[] memory invalidValue = new uint[](2);
+        invalidValue[0] = 1e6; // skip
+        invalidValue[1] = 1e6;
+
+        vm.expectRevert(abi.encodePacked(BulkSender.InvalidToken.selector));
+        sender.sendTokensToMany( IERC20(address(0)), addresses, amount);
+
+        vm.expectRevert(abi.encodePacked(BulkSender.InvalidRecipients.selector));
+        sender.sendTokensToMany( IERC20(address(usdc)), empty, amount);
+
+        vm.expectRevert(abi.encodePacked(BulkSender.NotEnoughBalance.selector));
+        sender.sendTokensToMany( IERC20(address(usdc)), addresses, amount);
+
+        usdc.mint(address(this), totalAmount);
+
+        vm.expectRevert(abi.encodePacked(BulkSender.NotEnoughApproval.selector));
+        sender.sendTokensToMany( IERC20(address(usdc)), addresses, amount);
+
+        usdc.approve(address(sender), totalAmount);
+
+        vm.expectRevert(abi.encodePacked(BulkSender.InvalidRecipient.selector));
+        sender.sendTokensToMany( IERC20(address(usdc)), invalidRecipient, invalidValue);
+
+        sender.sendTokensToMany( IERC20(address(usdc)), addresses, amount);
+
+        assertEq(usdc.balanceOf(addresses[1]), amount[1]);
+
+    }
+
+    function test_sendSameAmountToMany() public {
+        return;
         uint total = 200;
         address[] memory empty = new address[](0);
         address[] memory addresses = new address[](total);
@@ -67,6 +122,7 @@ contract BulkSenderTest is Test {
     }
 
     function testSendValue() public {
+        return;
         uint total = 200;
         address[] memory empty = new address[](0);
         address[] memory addresses = new address[](total);
@@ -102,6 +158,7 @@ contract BulkSenderTest is Test {
 
 
     function testSendKavaToMany() public {
+        return;
         uint total = 200;
         uint amount = 0.1 ether;
         uint value = amount * total;

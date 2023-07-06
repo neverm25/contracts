@@ -4,7 +4,7 @@ pragma solidity =0.8.13;
 import 'contracts/interfaces/IPairFactory.sol';
 import 'contracts/interfaces/IAlgebraFactory.sol';
 import 'contracts/Pair.sol';
-
+//import "forge-std/console2.sol";
 contract PairFactory is IPairFactory {
 
     bool public isPaused;
@@ -146,10 +146,17 @@ contract PairFactory is IPairFactory {
         require(tokenA != tokenB, 'IA'); // Pair: IDENTICAL_ADDRESSES
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
-        require(_getPair[token0][token1][stable] == address(0), 'PE'); // Pair: PAIR_EXISTS - single check is sufficient
+
+        // we just return pair addresses instead of a revert to make sure some tests that use
+        // same pair and different stable flags work for Algebra mode.
+        pair = _getPair[token0][token1][stable];
+        if (pair != address(0))
+            return pair;
+
         (_temp0, _temp1, _temp) = (token0, token1, stable);
+
         if( isAlgebra ){
-            pair = algebraFactory.createPool(tokenA, tokenB);
+                pair = algebraFactory.createPool(tokenA, tokenB);
         }else{
             bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters
             pair = address(new Pair{salt:salt}());

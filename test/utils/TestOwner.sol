@@ -9,7 +9,7 @@ import "contracts/Vara.sol";
 import "contracts/VotingEscrow.sol";
 import "utils/TestStakingRewards.sol";
 import "utils/TestVotingEscrow.sol";
-
+import "forge-std/console2.sol";
 contract TestOwner {
     /*//////////////////////////////////////////////////////////////
                                MockERC20
@@ -60,6 +60,7 @@ contract TestOwner {
     //////////////////////////////////////////////////////////////*/
 
     function addLiquidity(address payable _router, address _tokenA, address _tokenB, bool _stable, uint256 _amountADesired, uint256 _amountBDesired, uint256 _amountAMin, uint256 _amountBMin, address _to, uint256 _deadline) public {
+        console2.log(MockERC20(_tokenA).symbol(), MockERC20(_tokenB).symbol());
         UniversalRouter(_router).addLiquidity(_tokenA, _tokenB, _stable, _amountADesired, _amountBDesired, _amountAMin, _amountBMin, _to, _deadline);
     }
 
