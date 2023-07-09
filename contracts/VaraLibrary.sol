@@ -2,11 +2,18 @@
 
 pragma solidity =0.8.13;
 
-import "contracts/interfaces/IPair.sol";
-import "contracts/interfaces/IRouter.sol";
+import {IPair} from "contracts/interfaces/IPair.sol";
+import {IRouter} from 'contracts/interfaces/IRouter.sol';
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract VaraLibrary {
     IRouter internal immutable router;
+
+    int24 public constant MIN_TICK = -887272;
+    int24 public constant MAX_TICK = 887272;
+
+    uint256 public constant Q96 = 2**96;
+    uint256 public constant ETH = 10**18;
 
     constructor(address _router) {
         router = IRouter(_router);
@@ -72,7 +79,7 @@ contract VaraLibrary {
 
     function getAmountOut(uint amountIn, address tokenIn, address tokenOut, bool stable) external view returns (uint) {
         (uint dec0, uint dec1, uint r0, uint r1, bool st, address t0,) =
-                                    router.metadata(router.pairFor(tokenIn, tokenOut, stable));
+        router.metadata(router.pairFor(tokenIn, tokenOut, stable));
         return _getAmountOut(amountIn, tokenIn, r0, r1, t0, dec0, dec1, st) * 1e18 / amountIn;
     }
 

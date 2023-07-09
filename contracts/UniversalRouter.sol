@@ -1,30 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.13;
 
-import "contracts/interfaces/IERC20.sol";
-import "contracts/interfaces/ISwapRouter.sol";
-import "contracts/interfaces/IUniswapV2Router.sol";
-import "contracts/interfaces/INonfungiblePositionManager.sol";
-import "contracts/interfaces/IAlgebraPool.sol";
-import "contracts/interfaces/IPair.sol";
-import "contracts/interfaces/IPairFactory.sol";
-import "contracts/interfaces/IAlgebraFactory.sol";
-import "contracts/libraries/SqrtPrice.sol";
-import "contracts/libraries/ABDKMath64x64.sol";
+import {IERC20} from "contracts/interfaces/IERC20.sol";
+import {ISwapRouter} from "contracts/interfaces/ISwapRouter.sol";
+import {IUniswapV2Router} from "contracts/interfaces/IUniswapV2Router.sol";
+import {INonfungiblePositionManager} from "contracts/interfaces/INonfungiblePositionManager.sol";
+import {IAlgebraPool} from "contracts/interfaces/IAlgebraPool.sol";
+import {IPair} from "contracts/interfaces/IPair.sol";
+import {IPairFactory} from "contracts/interfaces/IPairFactory.sol";
+import {IAlgebraFactory} from "contracts/interfaces/IAlgebraFactory.sol";
+
+import {SqrtPrice} from "contracts/libraries/SqrtPrice.sol";
+import {IQuoter} from 'contracts/interfaces/IQuoter.sol';
+import {IRouter} from 'contracts/interfaces/IRouter.sol';
+import {LiquidityAmounts} from 'contracts/libraries/LiquidityAmounts.sol';
 //import "forge-std/console2.sol";
 
-contract UniversalRouter is IUniswapV2Router {
+contract UniversalRouter is IUniswapV2Router, IRouter {
     bool public isAlgebraMode;
     IUniswapV2Router uniswapRouter;
     ISwapRouter algebraRouter;
     INonfungiblePositionManager algebraPositionManager;
     IPairFactory pairFactory;
     IAlgebraFactory algebraFactory;
-    address public routerAddress; //
-    int24 tickLower = - 60;
-    int24 tickUpper = 60;
+    IQuoter quoter;
+    address public routerAddress;
+    int24 public DefaultTickLower = - 60;
+    int24 public DefaultTickUpper = 60;
 
-    constructor(bool _isAlgebraMode, address _uniswapRouter, address _algebraRouter, address _algebraPositionManager){
+    constructor(
+        bool _isAlgebraMode,
+        address _uniswapRouter,
+        address _algebraRouter,
+        address _algebraPositionManager,
+        address _quoter
+    ){
         algebraPositionManager = INonfungiblePositionManager(_algebraPositionManager);
         isAlgebraMode = _isAlgebraMode;
         uniswapRouter = IUniswapV2Router(_uniswapRouter);
@@ -32,6 +42,7 @@ contract UniversalRouter is IUniswapV2Router {
         algebraFactory = pairFactory.algebraFactory();
         algebraRouter = ISwapRouter(_algebraRouter);
         routerAddress = _isAlgebraMode ? _algebraRouter : _uniswapRouter;
+        quoter = IQuoter(_quoter);
     }
     function factory() external view returns (address){
         return uniswapRouter.factory();
@@ -142,14 +153,14 @@ contract UniversalRouter is IUniswapV2Router {
 
         (address token0, address token1) = sortTokens(tokenA, tokenB);
 
-        algebraCratePool(tokenA, tokenB, stable, amountADesired, amountBDesired);
+        address pool = algebraCratePool(tokenA, tokenB, stable, amountADesired, amountBDesired);
 
         INonfungiblePositionManager.MintParams memory params =
                             INonfungiblePositionManager.MintParams({
                 token0: token0,
                 token1: token1,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
+                tickLower: DefaultTickLower,
+                tickUpper: DefaultTickUpper,
                 amount0Desired: amountADesired,
                 amount1Desired: amountBDesired,
                 amount0Min: amountAMinimum,
@@ -160,7 +171,9 @@ contract UniversalRouter is IUniswapV2Router {
 
         (uint256 _tokenId,uint128 _liquidity, uint256 _amount0, uint256 _amount1) =
                             algebraPositionManager.mint(params);
+
         return (_tokenId, _liquidity);
+
     }
 
     function algebraCratePool(
@@ -305,7 +318,7 @@ contract UniversalRouter is IUniswapV2Router {
         require(token0 != address(0), 'Router: ZERO_ADDRESS');
     }
 
-    function pairFor(address tokenA, address tokenB, bool stable) public view returns (address pair) {
+    function pairFor(address tokenA, address tokenB, bool stable) public override(IRouter, IUniswapV2Router) view returns (address pair) {
         return pairFactory.pairFor(tokenA, tokenB, stable);
     }
 
@@ -331,6 +344,24 @@ contract UniversalRouter is IUniswapV2Router {
         } else {
             return IPair(pool).metadata();
         }
+    }
+
+    function getLiquidityInfoByTokenId(uint tokenId) public view returns
+    (address tokenA, address tokenB, int24 tickLower, int24 tickUpper, uint128 liquidity)
+    {
+        (
+            uint96,
+            address,
+            tokenB,
+            tokenA,
+            tickLower,
+            tickUpper,
+            liquidity,
+            uint256,
+            uint256,
+            uint128,
+            uint128
+        ) = algebraPositionManager.positions(tokenId);
     }
 
 }

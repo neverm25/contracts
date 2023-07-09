@@ -10,7 +10,7 @@ import 'contracts/interfaces/IRouter.sol';
 import 'contracts/interfaces/IWETH.sol';
 
 contract Router is IRouter {
-
+    bool public isAlgebraMode = false;
     struct route {
         address from;
         address to;

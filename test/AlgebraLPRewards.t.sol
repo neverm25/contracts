@@ -42,7 +42,7 @@ contract AlgebraLPRewardsTest is BaseTest {
     }
 
     function testLPsEarnEqualVaraBasedOnVeVara() public {
-        console2.log("testLPsEarnEqualVaraBasedOnVeVara");
+
         // owner1 deposits LP
         USDC.approve(address(router), 1e12);
         FRAX.approve(address(router), TOKEN_1M);
@@ -52,8 +52,8 @@ contract AlgebraLPRewardsTest is BaseTest {
         voter.createGauge(address(pair));
         address gaugeAddress = voter.gauges(address(pair));
         gauge = Gauge(gaugeAddress);
-        pair.approve(address(gauge), PAIR_1);
-        gauge.deposit(PAIR_1, 0);
+        pair.approve(address(gauge), PAIR_1); // 1e9
+        gauge.deposit(PAIR_1, 0); // 1e9
 
         // owner2 deposits LP
         vm.startPrank(address(owner2));

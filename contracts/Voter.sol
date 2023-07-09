@@ -72,6 +72,8 @@ contract Voter is IVoter {
         emergencyCouncil = msg.sender;
         isAlgebra = IPairFactory(factory).isAlgebra();
         pairFactory = IPairFactory(factory);
+        // checks:
+        IERC20(base).totalSupply();
     }
 
     // simple re-entrancy check
@@ -216,27 +218,13 @@ contract Voter is IVoter {
         require(gauges[_pool] == address(0x0), "exists");
         address[] memory allowedRewards = new address[](3);
         address[] memory internalRewards = new address[](2);
-        bool isPair;
-        address _gauge;
-        address tokenA;
-        address tokenB;
 
-        if( isAlgebra ) {
-            address _pool_factory = pairFactory.algebraFactory().poolByPair(tokenA, tokenB);
-            address _pool_hyper = IHypervisor(_pool).pool();
-            isPair = _pool_hyper == _pool_factory;
-            require(isPair, 'wrong tokens');
-        } else {
-            isPair = pairFactory.isPair(_pool);
-        }
+        (address tokenA, address tokenB,,) = pairFactory.getPairInfo(_pool);
+        address _gauge;
+
+        bool isPair = pairFactory.isPair(_pool);
 
         if (isPair) {
-            if( isAlgebra ){
-                tokenA = IPairInfo(_pool).token0();
-                tokenB = IPairInfo(_pool).token1();
-            }else{
-                (tokenA, tokenB) = IPair(_pool).tokens();
-            }
             allowedRewards[0] = tokenA;
             allowedRewards[1] = tokenB;
             internalRewards[0] = tokenA;

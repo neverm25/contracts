@@ -33,14 +33,15 @@ import "utils/TestWETH.sol";
 
 import {IAlgebraFactory} from 'contracts/interfaces/IAlgebraFactory.sol';
 import {IAlgebraPool} from 'contracts/interfaces/IAlgebraPool.sol';
+import {IQuoter} from 'contracts/interfaces/IQuoter.sol';
 import {INonfungiblePositionManager} from 'contracts/interfaces/INonfungiblePositionManager.sol';
 import {ISwapRouter} from 'contracts/interfaces/ISwapRouter.sol';
 import {IWETH} from 'contracts/interfaces/IWETH.sol';
-import { SqrtPrice } from "contracts/libraries/SqrtPrice.sol";
-import { FloorCeil } from "contracts/libraries/FloorCeil.sol";
-import { TickMath } from '@cryptoalgebra/core/contracts/libraries/TickMath.sol';
+import {SqrtPrice} from "contracts/libraries/SqrtPrice.sol";
+import {FloorCeil} from "contracts/libraries/FloorCeil.sol";
+import {TickMath} from '@cryptoalgebra/core/contracts/libraries/TickMath.sol';
 
-import { IERC721Receiver } from '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
+import {IERC721Receiver} from '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 
 abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     uint256 constant USDC_1 = 1e6;
@@ -117,17 +118,15 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     INonfungiblePositionManager algebraPositionManager;
     address algebraPositionManagerAddress;
 
-    MockERC20 usdc;
-    MockERC20 usdt;
-    IAlgebraPool pool;
-    address poolAddress;
+    IQuoter algebraQuoter;
+    address algebraQuoterAddress;
 
     uint256 positionTokenId;
     uint128 positionLiquidity;
     uint256 positionAmount0;
     uint256 positionAmount1;
 
-    int24 constant public tickLower = -60;
+    int24 constant public tickLower = - 60;
     int24 constant public tickUpper = 60;
 
     constructor(){
@@ -136,37 +135,41 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         uint CHAIN_ID = block.chainid;
         bool useMainnetAddresses = CHAIN_ID == VALID_MAINNET_ID;
         require(CHAIN_ID == VALID_TESTNET_ID || CHAIN_ID == VALID_MAINNET_ID, "block.chainid not VALID_TESTNET_ID or VALID_MAINNET_ID");
-        if( useMainnetAddresses){
+        if (useMainnetAddresses) {
             algebraFactoryAddress = Mainnet_AlgebraFactoryAddress;
             algebraRouterAddress = Mainnet_SwapRouterAddress;
             algebraWethAddress = Mainnet_wEthAddress;
             algebraPositionManagerAddress = Mainnet_NonfungiblePositionManagerAddress;
+            algebraQuoterAddress = Mainnet_QuoterAddress;
         } else {
             algebraFactoryAddress = Testnet_AlgebraFactoryAddress;
             algebraRouterAddress = Testnet_SwapRouterAddress;
             algebraWethAddress = Testnet_wEthAddress;
             algebraPositionManagerAddress = Testnet_NonfungiblePositionManagerAddress;
+            algebraQuoterAddress = Testnet_QuoterAddress;
         }
     }
 
     bool public isAlgebra = false;
+
     function useAlgebra() public {
         isAlgebra = true;
 
         // check if contracts code size:
-        if(algebraFactoryAddress.code.length == 0)
+        if (algebraFactoryAddress.code.length == 0)
             revert("algebraFactoryAddress code size is zero");
-        if(algebraRouterAddress.code.length == 0)
+        if (algebraRouterAddress.code.length == 0)
             revert("algebraRouterAddress code size is zero");
-        if(algebraWethAddress.code.length == 0)
+        if (algebraWethAddress.code.length == 0)
             revert("algebraWethAddress code size is zero");
-        if(algebraPositionManagerAddress.code.length == 0)
+        if (algebraPositionManagerAddress.code.length == 0)
             revert("algebraPositionManagerAddress code size is zero");
 
         algebraRouter = ISwapRouter(algebraRouterAddress);
         algebraWeth = IWETH(algebraWethAddress);
         algebraFactory = IAlgebraFactory(algebraFactoryAddress);
         algebraPositionManager = INonfungiblePositionManager(algebraPositionManagerAddress);
+        algebraQuoter = IQuoter(algebraQuoterAddress);
 
         /**
 
@@ -274,16 +277,20 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     }
 
     function deployPairFactoryAndRouter() public {
-        if( isAlgebra )
+        if (isAlgebra)
             require(algebraFactoryAddress != address(0), "useAlgebra(useMainnetAddresses) not set");
-        require( address(router) == address(0), "router already set" );
+        require(address(router) == address(0), "router already set");
         factory = new PairFactory(algebraFactoryAddress);
         assertEq(factory.allPairsLength(), 0, "allPairsLength should be 0");
         factory.setFee(true, 1); // set fee back to 0.01% for old tests
         factory.setFee(false, 1);
 
         routerUniswap = new Router2(address(factory), address(WETH));
-        router = new UniversalRouter(isAlgebra, address(routerUniswap), algebraRouterAddress, address(algebraPositionManager));
+        router = new UniversalRouter(isAlgebra,
+            address(routerUniswap),
+            algebraRouterAddress,
+            algebraPositionManagerAddress,
+            algebraQuoterAddress);
 
         assertEq(router.factory(), address(factory), "factory should be set");
         lib = new VaraLibrary(address(router));
@@ -291,21 +298,20 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     }
 
     function deployPairWithOwner(address _owner) public {
-        console2.log("deployPairWithOwner", _owner);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(USDC), address(router), USDC_1);
-        console2.log("addLiquidity frax/usdc true");
+
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(USDC), true, TOKEN_1, USDC_1, 0, 0, address(owner), block.timestamp);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(USDC), address(router), USDC_1);
-        console2.log("addLiquidity frax/usdc false");
+
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(USDC), false, TOKEN_1, USDC_1, 0, 0, address(owner), block.timestamp);
         TestOwner(_owner).approve(address(FRAX), address(router), TOKEN_1);
         TestOwner(_owner).approve(address(DAI), address(router), TOKEN_1);
-        console2.log("addLiquidity frax/dai true");
+
         TestOwner(_owner).addLiquidity(payable(address(router)), address(FRAX), address(DAI), true, TOKEN_1, TOKEN_1, 0, 0, address(owner), block.timestamp);
 
-        if( isAlgebra ){
+        if (isAlgebra) {
             // because when creating pools on Algebra it does not duplicate.
             assertEq(factory.allPairsLength(), 2, "algebra: allPairsLength should be 2");
         } else {
@@ -322,7 +328,10 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         address address3 = factory.getPair(address(FRAX), address(DAI), true);
         pair3 = Pair(address3);
 
-        assertGt(lib.getAmountOut(USDC_1, address(USDC), address(FRAX), true), 0, "should be > 0");
+        if( ! isAlgebra) {
+            // we don't have the concept of getAmountOut on Algebra
+            assertGt(lib.getAmountOut(USDC_1, address(USDC), address(FRAX), true), 0, "should be > 0");
+        }
     }
 
     function mintPairFraxUsdcWithOwner(address _owner) public {

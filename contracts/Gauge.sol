@@ -13,6 +13,7 @@ import 'contracts/interfaces/IVotingEscrow.sol';
 import 'contracts/interfaces/IRewarder.sol';
 import 'contracts/interfaces/IFeeVault.sol';
 import 'contracts/interfaces/IPairInfo.sol';
+import 'contracts/interfaces/INonfungiblePositionManager.sol';
 
 // Gauges are used to incentivize pools, they emit reward tokens over 7 days for staked LP tokens
 contract Gauge is IGauge {
@@ -49,6 +50,8 @@ contract Gauge is IGauge {
 
     address[] public rewards;
     mapping(address => bool) public isReward;
+
+
 
     /// @notice A checkpoint for marking balance
     struct Checkpoint {
@@ -93,8 +96,9 @@ contract Gauge is IGauge {
     // algebra integration:
     bool public isAlgebra;
     address public feeVault;
+    address public liquidityManager;
 
-    constructor(address pool_, address internal_bribe_, address external_bribe_, address ve_, address voter_, bool isPair_, address[] memory allowedRewardTokens_, address feeVault_) {
+    constructor(bool _isAlgebra, address _liquidityManager, address pool_, address internal_bribe_, address external_bribe_, address ve_, address voter_, bool isPair_, address[] memory allowedRewardTokens_, address feeVault_) {
         stake = pool_;
         internal_bribe = internal_bribe_;
         external_bribe = external_bribe_;
@@ -102,8 +106,9 @@ contract Gauge is IGauge {
         ve = IVotingEscrow(ve_);
         voter = voter_;
         isForPair = isPair_;
-        isAlgebra = feeVault_ != address(0);
+        isAlgebra = _isAlgebra;
         feeVault = feeVault_;
+        liquidityManager = _liquidityManager;
 
         for (uint i; i < allowedRewardTokens_.length; i++) {
             if (allowedRewardTokens_[i] != address(0)) {
@@ -487,16 +492,24 @@ contract Gauge is IGauge {
         deposit(IERC20(stake).balanceOf(msg.sender), tokenId);
     }
 
+    /// @dev Deposit liquidity position tokens to the gauge
+    /// @notice you can pass amount as 0 if in Algebra mode.
     function deposit(uint amount, uint tokenId) public lock isNotEmergency {
-        require(amount > 0, "invalid amount");
+
+        require(!isAlgebra && amount > 0, "Invalid ERC20 deposit amount for Curve mode.");
+        require(isAlgebra && tokenId > 0, "Invalid ERC721 token id for Algebra mode.");
+
         _updateRewardForAllTokens();
 
-        _safeTransferFrom(stake, msg.sender, address(this), amount);
+        // for Algebra, we get the total amount of liquidity position for the token id.
+        // for Curve, we just return same amount deposited.
+        amount = _safeTransferLiquidityPosition(amount, tokenId);
+
         totalSupply += amount;
         balanceOf[msg.sender] += amount;
 
         if (tokenId > 0) {
-            require(IVotingEscrow(_ve).ownerOf(tokenId) == msg.sender);
+            require(checkOwnerOfTokenId(tokenId, msg.sender), "not owner");
             if (tokenIds[msg.sender] == 0) {
                 tokenIds[msg.sender] = tokenId;
                 IVoter(voter).attachTokenToGauge(tokenId, msg.sender);
@@ -522,7 +535,31 @@ contract Gauge is IGauge {
 
         emit Deposit(msg.sender, tokenId, amount);
     }
+    function checkOwnerOfTokenId( address owner, uint tokenId ) public view returns (bool) {
+        IERC721 nft = IERC721( isAlgebra ? liquidityManager : _ve );
+        return nft.ownerOf(tokenId) == owner;
+    }
+    function _safeTransferLiquidityPosition(uint amount, uint tokenId) internal{
 
+        if( isAlgebra ){
+
+            IERC721 nft = IERC721( liquidityManager );
+
+            // on Algebra, we transfer the ERC721 position to the gauge
+            nft.safeTransferFrom(msg.sender, address(this), tokenId);
+
+            // get liquidity amount from position manager:
+            (uint96 , address , address , address , int24 , int24 , uint128 liquidity, uint256 , uint256 , uint128 , uint128)
+            = ILiquidityManager(liquidityManager).positions(tokenId);
+
+            amount = uint(liquidity);
+
+        }else{
+            // on Curve, we transfer the ERC20 amount to the gauge
+            _safeTransferFrom(stake, msg.sender, address(this), amount);
+        }
+        return amount;
+    }
     function withdrawAll() external {
         withdraw(balanceOf[msg.sender]);
     }
@@ -607,7 +644,7 @@ contract Gauge is IGauge {
     }
 
     function swapOutRewardToken(uint i, address oldToken, address newToken) external {
-        require(msg.sender == IVotingEscrow(_ve).team(), 'only team');
+        require(msg.sender == ve.team(), 'only team');
         require(rewards[i] == oldToken);
         isReward[oldToken] = false;
         isReward[newToken] = true;

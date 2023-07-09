@@ -4,7 +4,7 @@ pragma solidity =0.8.13;
 import 'contracts/interfaces/IPairFactory.sol';
 import 'contracts/interfaces/IAlgebraFactory.sol';
 import 'contracts/Pair.sol';
-//import "forge-std/console2.sol";
+
 contract PairFactory is IPairFactory {
 
     bool public isPaused;
@@ -27,6 +27,7 @@ contract PairFactory is IPairFactory {
     bool public activeReferral;
 
     mapping(address => mapping(address => mapping(bool => address))) internal _getPair;
+    mapping(address => mapping(address => address)) internal _getPairOnAlgebra;
 
 
     // get pair info by pool address, can be used to get pool info when we
@@ -35,7 +36,9 @@ contract PairFactory is IPairFactory {
         address token0;
         address token1;
         bool stable;
-        uint createdAt;
+        uint createdAtTimestamp;
+        uint createdAtBlock;
+        bool isAlgebra;
     }
     mapping(address => PairInfo) private pairInfo;
 
@@ -144,19 +147,23 @@ contract PairFactory is IPairFactory {
     function createPair(address tokenA, address tokenB, bool stable) external returns (address pair) {
         require(!isPaused, 'paused');
         require(tokenA != tokenB, 'IA'); // Pair: IDENTICAL_ADDRESSES
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
 
         // we just return pair addresses instead of a revert to make sure some tests that use
         // same pair and different stable flags work for Algebra mode.
-        pair = _getPair[token0][token1][stable];
-        if (pair != address(0))
+        pair = pairFor(tokenA, tokenB, stable);
+        string memory symbolA = Pair(tokenA).symbol();
+        string memory symbolB = Pair(tokenB).symbol();
+        if ( pair != address(0) ){
             return pair;
+        }
 
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'ZA'); // Pair: ZERO_ADDRESS
         (_temp0, _temp1, _temp) = (token0, token1, stable);
 
         if( isAlgebra ){
-                pair = algebraFactory.createPool(tokenA, tokenB);
+            pair = algebraFactory.createPool(token0, token1);
+            _getPairOnAlgebra[token0][token1] = pair;
         }else{
             bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters
             pair = address(new Pair{salt:salt}());
@@ -172,7 +179,9 @@ contract PairFactory is IPairFactory {
             token0: token0,
             token1: token1,
             stable: stable,
-            createdAt: block.timestamp
+            createdAtTimestamp: block.timestamp,
+            createdAtBlock: block.number,
+            isAlgebra: isAlgebra
         });
 
         emit PairCreated(token0, token1, stable, pair, allPairs.length);
@@ -223,7 +232,12 @@ contract PairFactory is IPairFactory {
     }
 
     function pairFor(address tokenA, address tokenB, bool stable) public view returns (address pair) {
-        pair = _getPair[tokenA][tokenB][stable];
+        // sort:
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        if( isAlgebra )
+            pair = _getPairOnAlgebra[token0][token1];
+        else
+            pair = _getPair[token0][token1][stable];
     }
     function getPair(address tokenA, address tokenB, bool stable) external view returns (address pair) {
         pair = pairFor(tokenA, tokenB, stable);
@@ -239,6 +253,6 @@ contract PairFactory is IPairFactory {
         token0 = info.token0;
         token1 = info.token1;
         stable = info.stable;
-        createdAt = info.createdAt;
+        createdAt = info.createdAtTimestamp;
     }
 }
