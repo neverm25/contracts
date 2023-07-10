@@ -4,7 +4,6 @@ pragma solidity =0.8.13;
 
 import {IPair} from "contracts/interfaces/IPair.sol";
 import {IRouter} from 'contracts/interfaces/IRouter.sol';
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract VaraLibrary {
     IRouter internal immutable router;

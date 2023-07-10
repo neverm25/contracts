@@ -36,7 +36,7 @@ contract KillGaugesTest is BaseTest {
 
     deployPairWithOwner(address(owner));
 
-    gaugeFactory = new GaugeFactory(address(factory));
+    gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
     bribeFactory = new BribeFactory();
     voter = new Voter(
       address(escrow),

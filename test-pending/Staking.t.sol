@@ -49,7 +49,7 @@ contract StakingTest is BaseTest {
     function deployFactory() public {
         createLock3();
 
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         address[] memory allowedRewards = new address[](1);
         vm.prank(address(voter));
         gaugeFactory.createGauge(address(stake), address(owner), address(owner), address(escrow), false, allowedRewards);

@@ -13,5 +13,6 @@ interface IGaugeFactory {
     function getAllAlgebraGauges() external view returns (address[] memory);
     function getAlgebraGauge(uint256 index) external view returns (address);
     function getAlgebraGaugesLength() external view returns (uint256);
+    function liquidityManager() external view returns (address);
 
 }

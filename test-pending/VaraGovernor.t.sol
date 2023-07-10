@@ -44,7 +44,7 @@ contract VaraGovernorTest is BaseTest {
         FRAX.approve(address(router), TOKEN_100K);
         router.addLiquidity(address(FRAX), address(USDC), true, TOKEN_100K, USDC_100K, TOKEN_100K, USDC_100K, address(owner), block.timestamp);
 
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
 

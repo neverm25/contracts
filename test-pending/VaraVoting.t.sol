@@ -27,7 +27,7 @@ contract VaraVotingTest is BaseTest {
         escrow = new VotingEscrow(address(VARA), address(artProxy));
         factory = new PairFactory(address(0));
         router = new Router(address(factory), address(owner));
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(
             address(escrow),

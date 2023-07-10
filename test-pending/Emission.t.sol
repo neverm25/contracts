@@ -49,7 +49,7 @@ contract Emission is Test {
     Gauge gauge_eth_vara;
     function setUp() public {
         vara = new Vara();
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         bribeFactory = new BribeFactory();
         pairFactory = new PairFactory(address(0));
         WETH = new TestWETH();

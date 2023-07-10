@@ -17,6 +17,7 @@ import 'contracts/interfaces/IVotingEscrow.sol';
 import './interfaces/IAlgebraFactory.sol';
 import './interfaces/IHypervisor.sol';
 import './interfaces/IPairInfo.sol';
+import {INonfungiblePositionManager} from "contracts/interfaces/INonfungiblePositionManager.sol";
 
 contract Voter is IVoter {
 
@@ -61,6 +62,7 @@ contract Voter is IVoter {
 
     bool public isAlgebra;
     IPairFactory pairFactory;
+    INonfungiblePositionManager public liquidityManager;
     constructor(address __ve, address _factory, address  _gauges, address _bribes) {
         _ve = __ve;
         factory = _factory;
@@ -74,6 +76,8 @@ contract Voter is IVoter {
         pairFactory = IPairFactory(factory);
         // checks:
         IERC20(base).totalSupply();
+        liquidityManager = INonfungiblePositionManager( IGaugeFactory(gaugeFactory).liquidityManager() );
+        liquidityManager.symbol();
     }
 
     // simple re-entrancy check

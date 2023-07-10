@@ -28,7 +28,7 @@ contract LPRewardsTest is BaseTest {
         deployPairFactoryAndRouter();
         deployPairWithOwner(address(owner));
         deployPairWithOwner(address(owner2));
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
         address[] memory tokens = new address[](4);

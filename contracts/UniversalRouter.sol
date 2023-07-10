@@ -346,22 +346,4 @@ contract UniversalRouter is IUniswapV2Router, IRouter {
         }
     }
 
-    function getLiquidityInfoByTokenId(uint tokenId) public view returns
-    (address tokenA, address tokenB, int24 tickLower, int24 tickUpper, uint128 liquidity)
-    {
-        (
-            uint96,
-            address,
-            tokenB,
-            tokenA,
-            tickLower,
-            tickUpper,
-            liquidity,
-            uint256,
-            uint256,
-            uint128,
-            uint128
-        ) = algebraPositionManager.positions(tokenId);
-    }
-
 }

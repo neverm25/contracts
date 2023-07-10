@@ -29,7 +29,7 @@ contract AlgebraLPRewardsTest is BaseTest {
         deployPairFactoryAndRouter();
         deployPairWithOwner(address(owner));
         deployPairWithOwner(address(owner2));
-        gaugeFactory = new GaugeFactory(address(factory));
+        gaugeFactory = new GaugeFactory(isAlgebra, algebraPositionManagerAddress, address(factory));
         bribeFactory = new BribeFactory();
         voter = new Voter(address(escrow), address(factory), address(gaugeFactory), address(bribeFactory));
         address[] memory tokens = new address[](4);
@@ -47,14 +47,29 @@ contract AlgebraLPRewardsTest is BaseTest {
         USDC.approve(address(router), 1e12);
         FRAX.approve(address(router), TOKEN_1M);
         router.addLiquidity(address(FRAX), address(USDC), true, TOKEN_1M, 1e12, 0, 0, address(owner2), block.timestamp);
-        address address1 = factory.getPair(address(FRAX), address(USDC), true);
-        pair = Pair(address1);
-        voter.createGauge(address(pair));
-        address gaugeAddress = voter.gauges(address(pair));
-        gauge = Gauge(gaugeAddress);
-        pair.approve(address(gauge), PAIR_1); // 1e9
-        gauge.deposit(PAIR_1, 0); // 1e9
+        address pairAddress = factory.getPair(address(FRAX), address(USDC), true);
 
+        voter.createGauge(pairAddress);
+        address gaugeAddress = voter.gauges(pairAddress);
+        gauge = Gauge(gaugeAddress);
+        if( isAlgebra ) {
+PENDING: CORRECT NFT ID OR ERC20 DEPOSIT AMOUNT ON deposit/withdraw functions.
+            // on algebra we approve the ERC721 nft to the gauge
+            console2.log("--MARK-- 1");
+            uint tokenId = algebraPositionManager.tokenOfOwnerByIndex(address(owner2), 0);
+            require( tokenId > 0, "tokenId should be > 0" );
+            console2.log("--MARK-- 2");
+            // prank as the owner of the token id is owner2:
+            vm.startPrank(address(owner2));
+            algebraPositionManager.approve(address(gauge), tokenId); // 1e9
+            gauge.deposit(0, tokenId); // 1e9
+            vm.stopPrank();
+        }else{
+            // on curve we approve the ERC20 token to the gauge
+            Pair(pairAddress).approve(address(gauge), PAIR_1); // 1e9
+            gauge.deposit(PAIR_1, 0); // 1e9
+        }
+        console2.log("--MARK--");
         // owner2 deposits LP
         vm.startPrank(address(owner2));
         USDC.approve(address(router), 1e12);
