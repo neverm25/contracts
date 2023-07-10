@@ -227,9 +227,15 @@ async function sendSameAmountToMany_Run(){
 
 async function sendManyAmountToMany_Status(){
     const token = $('#sendManyAmountToMany_Token').val();
-    const amountsArray = splitAndClean( $('#sendManyAmountToMany_Amount').val(), false );
+    const amounts = $('#sendManyAmountToMany_Amount').val();
+    const amountsArray = splitAndClean( amounts, false );
     const addresses = $('#sendManyAmountToMany_List').val();
     const addressesArray = splitAndClean(addresses);
+
+    console.log('amounts', amounts);
+    console.log('amountsArray', amountsArray);
+    console.log('addresses', addresses);
+    console.log('addressesArray', addressesArray);
 
     // Vara: 0xE1da44C0dA55B075aE8E2e4b6986AdC76Ac77d73 (18)
     // cpVara: 0xFa4384b298084A0ef13F378853DEDbB33A857B31 (9)
@@ -354,7 +360,7 @@ async function sendManyAmountToMany_Approve(){
     green('#sendManyAmountToMany_SubmitHelp', approvedInfo);
 }
 async function sendManyAmountToMany_Run(){
-    yellow('#sendManyAmountToMany_SubmitHelp', 'Check your input data...');
+    yellow('#sendManyAmountToMany_SubmitHelp', 'Checking your input data...');
     const status = await sendManyAmountToMany_Status();
     if( status !== true ){
         $('#sendManyAmountToMany_SubmitHelp').html(status );
