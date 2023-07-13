@@ -53,7 +53,7 @@ contract AlgebraLPRewardsTest is BaseTest {
         address gaugeAddress = voter.gauges(pairAddress);
         gauge = Gauge(gaugeAddress);
         if( isAlgebra ) {
-PENDING: CORRECT NFT ID OR ERC20 DEPOSIT AMOUNT ON deposit/withdraw functions.
+
             // on algebra we approve the ERC721 nft to the gauge
             console2.log("--MARK-- 1");
             uint tokenId = algebraPositionManager.tokenOfOwnerByIndex(address(owner2), 0);

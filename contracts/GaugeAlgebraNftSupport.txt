@@ -16,9 +16,10 @@ import 'contracts/interfaces/IPairInfo.sol';
 import 'contracts/interfaces/INonfungiblePositionManager.sol';
 
 import "forge-std/console2.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 // Gauges are used to incentivize pools, they emit reward tokens over 7 days for staked LP tokens
-contract Gauge is IGauge {
+contract Gauge is IGauge, IERC721Receiver {
 
     address public immutable stake; // the LP token that needs to be staked for rewards
     address public immutable _ve; // the ve token used for gauges
@@ -496,33 +497,46 @@ contract Gauge is IGauge {
         return reward;
     }
 
-    function depositAll(uint tokenId) external {
+    function depositAll(uint veTokenId) external {
         // for Algebra, we get the position id.
         // for Curve, we just return same amount deposited.
         uint amountOrPositionId = isAlgebra ?
             liquidityManager.tokenOfOwnerByIndex(msg.sender, 0) :
             IERC20(stake).balanceOf(msg.sender);
         require( amountOrPositionId > 0, "Invalid amountOrPositionId.");
-        deposit(amountOrPositionId, tokenId);
+        deposit(amountOrPositionId, veTokenId);
     }
 
-    function deposit(uint amount, uint tokenId) public lock {
-        require(amount > 0);
+    /// @dev Deposit liquidity position tokens to the gauge
+    /// @notice you can pass amount as 0 if in Algebra mode.
+    function deposit(uint amountOrPositionId, uint veTokenId) public lock isNotEmergency {
+        console2.log("deposit", isAlgebra, amountOrPositionId, veTokenId);
+        require(amountOrPositionId > 0, "Invalid amountOrPositionId deposit.");
+
         _updateRewardForAllTokens();
 
-        _safeTransferFrom(stake, msg.sender, address(this), amount);
-        totalSupply += amount;
-        balanceOf[msg.sender] += amount;
+        // for Algebra, we get the total amount of liquidity position for the token id.
+        // for Curve, we just return same amount deposited.
+        uint deposit = _safeTransferLiquidityPosition(amountOrPositionId);
 
-        if (tokenId > 0) {
-            require(IVotingEscrow(_ve).ownerOf(tokenId) == msg.sender);
+        // now deposit contains:
+        // - for Algebra: total amount of liquidity position for the token id.
+        // - for Curve: same amount deposited.
+        totalSupply += deposit;
+        balanceOf[msg.sender] += deposit;
+
+        // now we map the owner of each nft to allow withdraw later:
+        if( isAlgebra ) ownerOf[amountOrPositionId] = msg.sender;
+
+        if (veTokenId > 0) {
+            require(checkOwnerOfTokenId(msg.sender, veTokenId), "NO1");
             if (tokenIds[msg.sender] == 0) {
-                tokenIds[msg.sender] = tokenId;
-                IVoter(voter).attachTokenToGauge(tokenId, msg.sender);
+                tokenIds[msg.sender] = veTokenId;
+                IVoter(voter).attachTokenToGauge(veTokenId, msg.sender);
             }
-            require(tokenIds[msg.sender] == tokenId);
+            require(tokenIds[msg.sender] == veTokenId, "NO2");
         } else {
-            tokenId = tokenIds[msg.sender];
+            veTokenId = tokenIds[msg.sender];
         }
 
         uint _derivedBalance = derivedBalances[msg.sender];
@@ -534,15 +548,42 @@ contract Gauge is IGauge {
         _writeCheckpoint(msg.sender, _derivedBalance);
         _writeSupplyCheckpoint();
 
-        IVoter(voter).emitDeposit(tokenId, msg.sender, amount);
-        emit Deposit(msg.sender, tokenId, amount);
+        IVoter(voter).emitDeposit(veTokenId, msg.sender, deposit);
+
+        if (address(gaugeRewarder) != address(0))
+            IRewarder(gaugeRewarder).onReward( msg.sender, msg.sender, balanceOf[msg.sender]);
+
+        emit Deposit(msg.sender, veTokenId, deposit);
+        console2.log("deposit done", isAlgebra, deposit, veTokenId);
+    }
+    function checkOwnerOfTokenId( address owner, uint tokenId ) public view returns (bool) {
+        IERC721 nft = IERC721( isAlgebra ? liquidityManagerAddress : _ve );
+        return nft.ownerOf(tokenId) == owner;
+    }
+    function _safeTransferLiquidityPosition(uint amountOrPositionId) internal returns (uint) {
+
+        if( isAlgebra ){
+
+            // on Algebra, we transfer the ERC721 position to the gauge
+            liquidityManager.safeTransferFrom(msg.sender, address(this), amountOrPositionId);
+
+            // get liquidity amount from position manager:
+            amount = getLiquidityAmountByNftId(amountOrPositionId);
+
+            console2.log("gauge amount", amount, amountOrPositionId);
+
+        }else{
+            // on Curve, we transfer the ERC20 amount to the gauge
+            _safeTransferFrom(stake, msg.sender, address(this), amountOrPositionId);
+        }
+        return amount;
     }
 
     function withdrawAll() external {
         withdraw(balanceOf[msg.sender]);
     }
 
-    function withdraw(uint amount) public  {
+    function withdraw(uint amount) public isNotEmergency {
         uint tokenId = 0;
         if (amount == balanceOf[msg.sender]) {
             tokenId = tokenIds[msg.sender];
@@ -550,12 +591,24 @@ contract Gauge is IGauge {
         withdrawToken(amount, tokenId);
     }
 
-    function withdrawToken(uint amount, uint tokenId) public lock isNotEmergency {
+    function withdrawToken(uint amountOrPositionId, uint tokenId) public lock isNotEmergency {
+        uint amount = amountOrPositionId;
+        if( isAlgebra == true ){
+            require(amountOrPositionId>0, "Invalid ERC721 withdraw amount for Algebra mode.");
+            // in Algebra mode, we set amount to the position liquidity:
+            amount = getLiquidityAmountByNftId(amountOrPositionId);
+        }
         _updateRewardForAllTokens();
-
         totalSupply -= amount;
         balanceOf[msg.sender] -= amount;
-        _safeTransfer(stake, msg.sender, amount);
+        if( isAlgebra == true ){
+            // check owner:
+            require(ownerOf[amountOrPositionId] == msg.sender, "Invalid owner of ERC721 token.");
+            // send the nft back to the owner:
+            liquidityManager.safeTransferFrom(address(this), msg.sender, amountOrPositionId);
+        }else{
+            _safeTransfer(stake, msg.sender, amount);
+        }
 
         if (tokenId > 0) {
             require(tokenId == tokenIds[msg.sender]);
@@ -575,6 +628,10 @@ contract Gauge is IGauge {
         _writeSupplyCheckpoint();
 
         IVoter(voter).emitWithdraw(tokenId, msg.sender, amount);
+
+        if (address(gaugeRewarder) != address(0))
+            IRewarder(gaugeRewarder).onReward( msg.sender, msg.sender, balanceOf[msg.sender]);
+
         emit Withdraw(msg.sender, tokenId, amount);
     }
 
@@ -661,4 +718,18 @@ contract Gauge is IGauge {
         gaugeRewarder = _gaugeRewarder;
     }
 
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        // nothing to do right now, as we handle token id ownership in the deposit
+        return this.onERC721Received.selector;
+    }
+    function getLiquidityAmountByNftId(uint tokenId) public view returns (uint) {
+        // get liquidity amount from position manager:
+        (, , , , , , uint128 liquidity, , , ,) = liquidityManager.positions(tokenId);
+        return uint(liquidity);
+    }
 }
