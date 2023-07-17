@@ -1,4 +1,4 @@
-pragma solidity =0.8.13;
+pragma solidity 0.8.13;
 
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
@@ -39,9 +39,14 @@ import {ISwapRouter} from 'contracts/interfaces/ISwapRouter.sol';
 import {IWETH} from 'contracts/interfaces/IWETH.sol';
 import {SqrtPrice} from "contracts/libraries/SqrtPrice.sol";
 import {FloorCeil} from "contracts/libraries/FloorCeil.sol";
-import {TickMath} from '@cryptoalgebra/core/contracts/libraries/TickMath.sol';
+import {TickMath} from 'contracts/libraries/TickMath.sol';
 
 import {IERC721Receiver} from '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
+
+// Gamma setup:
+import "./Gamma/Clearing.sol";
+import "./Gamma/Hypervisor.sol";
+import "./Gamma/UniProxy.sol";
 
 abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     uint256 constant USDC_1 = 1e6;
@@ -130,11 +135,7 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
     int24 constant public tickUpper = 60;
 
     constructor(){
-        uint VALID_TESTNET_ID = vm.envUint("VALID_TESTNET_ID");
-        uint VALID_MAINNET_ID = vm.envUint("VALID_MAINNET_ID");
-        uint CHAIN_ID = block.chainid;
-        bool useMainnetAddresses = CHAIN_ID == VALID_MAINNET_ID;
-        require(CHAIN_ID == VALID_TESTNET_ID || CHAIN_ID == VALID_MAINNET_ID, "block.chainid not VALID_TESTNET_ID or VALID_MAINNET_ID");
+        bool useMainnetAddresses = true;
         if (useMainnetAddresses) {
             algebraFactoryAddress = Mainnet_AlgebraFactoryAddress;
             algebraRouterAddress = Mainnet_SwapRouterAddress;
@@ -165,50 +166,15 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         if (algebraPositionManagerAddress.code.length == 0)
             revert("algebraPositionManagerAddress code size is zero");
 
+        if( address(algebraRouter) != address(0) )
+            return;
+
         algebraRouter = ISwapRouter(algebraRouterAddress);
         algebraWeth = IWETH(algebraWethAddress);
         algebraFactory = IAlgebraFactory(algebraFactoryAddress);
         algebraPositionManager = INonfungiblePositionManager(algebraPositionManagerAddress);
         algebraQuoter = IQuoter(algebraQuoterAddress);
 
-        /**
-
-        usdc = new MockERC20("USDC", "USDC", 6);
-        usdt = new MockERC20("USDT", "USDT", 6);
-
-        uint amount0ToMint = 10_000_000e6;
-        uint amount1ToMint = 10_000_000e6;
-        usdc.mint(address(this), amount0ToMint);
-        usdt.mint(address(this), amount1ToMint);
-
-        usdc.approve(address(algebraPositionManager), amount0ToMint);
-        usdt.approve(address(algebraPositionManager), amount1ToMint);
-
-        uint256 amount = 1e6;
-        uint160 sqrtPriceX96 = SqrtPrice.getSqrtPrice(amount, amount);
-        poolAddress = algebraFactory.poolByPair(address(usdc), address(usdt));
-
-        if (poolAddress == address(0)) {
-            poolAddress = algebraFactory.createPool(address(usdc), address(usdt));
-            IAlgebraPool(poolAddress).initialize(sqrtPriceX96);
-        }
-        pool = IAlgebraPool(pool);
-
-        INonfungiblePositionManager.MintParams memory params =
-                            INonfungiblePositionManager.MintParams({
-                token0: address(usdt),
-                token1: address(usdc),
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                amount0Desired: amount0ToMint,
-                amount1Desired: amount1ToMint,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: address(this),
-                deadline: block.timestamp
-            });
-        (positionTokenId, positionLiquidity, positionAmount0, positionAmount1) = algebraPositionManager.mint(params);
-        */
     }
 
     function onERC721Received(address, address, uint256, bytes calldata)
@@ -338,6 +304,78 @@ abstract contract BaseTest is Test, TestOwner, IERC721Receiver {
         TestOwner(_owner).transfer(address(USDC), address(pair), USDC_1);
         TestOwner(_owner).transfer(address(FRAX), address(pair), TOKEN_1);
         TestOwner(_owner).mint(address(pair), _owner);
+    }
+
+    UniProxy gamma;
+    Clearing gammaClearing;
+    Hypervisor hypervisor;
+    MockERC20 usdc;
+    MockERC20 usdt;
+    address poolAddress;
+    IAlgebraPool pool;
+
+    function setupGamma(address tokenA, address tokenB) public{
+        if (address(gamma) != address(0)) {
+            return;
+        }
+        useAlgebra();
+        deployPairFactoryAndRouter();
+
+
+
+        usdc = new MockERC20("USDC", "USDC", 6);
+        usdt = new MockERC20("USDT", "USDT", 6);
+
+        uint amount0ToMint = 10_000_000e6;
+        uint amount1ToMint = 10_000_000e6;
+        usdc.mint(address(this), amount0ToMint);
+        usdt.mint(address(this), amount1ToMint);
+
+        usdc.approve(address(algebraPositionManager), amount0ToMint);
+        usdt.approve(address(algebraPositionManager), amount1ToMint);
+
+        uint256 amount = 1e6;
+        uint160 sqrtPriceX96 = SqrtPrice.getSqrtPrice(amount, amount);
+        poolAddress = algebraFactory.poolByPair(address(usdc), address(usdt));
+
+        if (poolAddress == address(0)) {
+            poolAddress = algebraFactory.createPool(address(usdc), address(usdt));
+            IAlgebraPool(poolAddress).initialize(sqrtPriceX96);
+        }
+        pool = IAlgebraPool(pool);
+
+        /*
+        INonfungiblePositionManager.MintParams memory params =
+                            INonfungiblePositionManager.MintParams({
+                token0: address(usdt),
+                token1: address(usdc),
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amount0ToMint,
+                amount1Desired: amount1ToMint,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: address(this),
+                deadline: block.timestamp
+            });
+        (positionTokenId, positionLiquidity, positionAmount0, positionAmount1) = algebraPositionManager.mint(params);
+        */
+
+        gammaClearing = new Clearing();
+        gamma = new UniProxy(address(gammaClearing));
+        hypervisor = new Hypervisor(poolAddress, address(this), "hypervisor", "HYP");
+        hypervisor.setWhitelist(address(this));
+
+        // hypervisor initial re-balance
+        int24 baseLower = -887220;
+        int24 baseUpper = 887220;
+        int24 limitLower = -600;
+        int24 limitUpper = 600;
+        address feeRecipient = address(this);
+        uint256[4] memory inMin;
+        uint256[4] memory outMin;
+        hypervisor.rebalance(baseLower, baseUpper, limitLower, limitUpper, feeRecipient, inMin, outMin);
+
     }
 
     receive() external payable {}

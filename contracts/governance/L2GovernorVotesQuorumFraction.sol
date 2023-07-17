@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.5.0) (governance/extensions/GovernorVotesQuorumFraction.sol)
 
-pragma solidity =0.8.13;
+pragma solidity ^0.8.0;
 
 import {L2GovernorVotes} from "contracts/governance/L2GovernorVotes.sol";
 

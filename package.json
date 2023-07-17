@@ -6,7 +6,10 @@
   "directories": {
     "lib": "lib"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.1",
+    "@openzeppelin/contracts-upgradeable": "^4.8.1",
+    "@openzeppelin/merkle-tree": "^1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-etherscan": "^3.1.5",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
@@ -28,16 +31,9 @@
     "typechain": "^8.0.0",
     "typescript": "^4.6.4"
   },
-  "dependencies": {
-    "@cryptoalgebra/core": "^3.0.0",
-    "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "^4.8.0",
-    "@openzeppelin/merkle-tree": "^1.0.2",
-    "cross-env": "^7.0.3"
-  },
   "scripts": {
-    "test0": "forge test -vv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
-    "test": "forge test -vvvvv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
+    "test0": "clear && forge test -vv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
+    "test": "clear && forge test -vvvvv --chain-id 2222 --fork-block-number 5420000 --fork-url https://evm.data.equilibre.kava.io/",
     "live": "nodemon -r dotenv/config --exec yarn test0 -e sol,js,ts,json -w .env --ignore artifacts --ignore cache --ignore typechain-types "
   }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.13;
-import "forge-std/console2.sol";
+
 import 'contracts/libraries/Math.sol';
 import 'contracts/interfaces/IBribe.sol';
 import "contracts/interfaces/IERC20.sol";
@@ -15,7 +15,7 @@ import 'contracts/interfaces/IFeeVault.sol';
 import 'contracts/interfaces/IPairInfo.sol';
 import 'contracts/interfaces/INonfungiblePositionManager.sol';
 
-import "forge-std/console2.sol";
+//import "forge-std/console2.sol";
 
 // Gauges are used to incentivize pools, they emit reward tokens over 7 days for staked LP tokens
 contract Gauge is IGauge {

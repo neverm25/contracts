@@ -57,4 +57,5 @@ contract VaraGovernor is
             (token.getPastTotalSupply(block.timestamp) * proposalNumerator) /
             PROPOSAL_DENOMINATOR;
     }
+
 }
